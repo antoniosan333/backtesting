@@ -46,7 +46,7 @@ def test_flat_vol_bsm_chain_produces_consistent_expected_moves() -> None:
     dte = 35.0
     t = dte / 365.0
     rows = []
-    for strike in (95.0, 100.0, 105.0):
+    for strike in (90.0, 95.0, 100.0, 105.0, 110.0):
         for side in ("call", "put"):
             mid = black_scholes_price(side, spot, strike, t, 0.0, sigma)
             rows.append(_quote(side=side, strike=strike, mid=mid, iv=sigma, dte=dte))
@@ -65,12 +65,12 @@ def test_flat_vol_bsm_chain_produces_consistent_expected_moves() -> None:
 
 def test_weighted_expected_move_matches_published_example() -> None:
     rows = [
-        _quote(side="call", strike=121, mid=2.20),
-        _quote(side="put", strike=121, mid=2.20),
-        _quote(side="call", strike=122, mid=1.73),
-        _quote(side="put", strike=120, mid=1.73),
-        _quote(side="call", strike=123, mid=1.33),
-        _quote(side="put", strike=119, mid=1.33),
+        _quote(side="call", strike=121, mid=2.20, spot=121),
+        _quote(side="put", strike=121, mid=2.20, spot=121),
+        _quote(side="call", strike=122, mid=1.73, spot=121),
+        _quote(side="put", strike=120, mid=1.73, spot=121),
+        _quote(side="call", strike=123, mid=1.33, spot=121),
+        _quote(side="put", strike=119, mid=1.33, spot=121),
     ]
 
     move = expected_move_for_expiry(pd.DataFrame(rows), "2026-02-06", 121.0)

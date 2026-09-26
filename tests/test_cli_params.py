@@ -78,7 +78,9 @@ def test_run_with_different_params_writes_distinct_runs(project: Path) -> None:
     second = runner.invoke(cli.app, ["run", "tunable", "--param", "enabled=false"])
 
     assert first.exit_code == 0 and second.exit_code == 0
-    hashes = {path.parent.name.rsplit("-", 1)[-1] for path in (project / "runs").glob("*/tunable/*/metrics.json")}
+    hashes = {
+        path.parent.name.rsplit("-", 1)[-1] for path in (project / "runs").glob("*/tunable/*/metrics.json")
+    }
     assert len(hashes) == 2
 
 

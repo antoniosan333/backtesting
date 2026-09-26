@@ -185,3 +185,13 @@ def compute_config_hash(snapshot_payload: dict[str, Any]) -> str:
 
 
 DEFAULT_PREFERENCES = Preferences()
+
+
+def preferences_path(root: Path) -> Path:
+    return root / "config" / "preferences.toml"
+
+
+def load_project_preferences(root: Path) -> Preferences:
+    """Preferences for the project at ``root``, or the defaults before ``init``."""
+    path = preferences_path(root)
+    return Preferences.load(path) if path.exists() else DEFAULT_PREFERENCES

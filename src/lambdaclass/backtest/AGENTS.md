@@ -5,7 +5,7 @@
 Inputs: `Strategy`, sorted bars `DataFrame`, options chain `DataFrame`, `Preferences`, optional `earnings` DataFrame.
 
 - Cash starts at `preferences.defaults.starting_capital`.
-- Options grouped by `asof` (string key); chain for bar date passed into `StrategyContext`.
+- Options grouped by `asof` (string key) via `prepare_chain_by_date`; chain for bar date passed into `StrategyContext`. Callers running many backtests over one chain pass `chain_by_date=prepare_chain_by_date(chain)` to skip the rebuild (the dominant per-run cost on large chains). Strategies must not mutate chain frames, since they are shared.
 - Earnings calendar (if provided) fills `days_to_next_earnings`, `days_since_last_earnings`, `next_earnings_date`, `earnings_timing` via `lambdaclass.earnings.calendar.context_fields`.
 - **Stock buy**: `price * qty + stock_commission(qty) + slippage` from `slippage_bps`, where stock commission is `stock_commission_per_order + per_share * qty` (both default `0.0`). `commission_per_contract` is options-only.
 - Stock orders enforce `[risk].max_position_pct` on absolute notional when they increase exposure; buys also need available cash unless `defaults.allow_negative_cash` is enabled.

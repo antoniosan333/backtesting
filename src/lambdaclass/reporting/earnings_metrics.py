@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from bisect import bisect_right
+from collections.abc import Mapping
 from typing import Any
 
 import pandas as pd
@@ -55,11 +56,11 @@ def _group_structures(option_trades: pd.DataFrame) -> list[dict[str, Any]]:
     """
     if option_trades is None or option_trades.empty:
         return []
-    ot = option_trades.copy().reset_index(drop=True)
     structures: list[dict[str, Any]] = []
     current: dict[str, Any] | None = None
-    for _, row in ot.iterrows():
+    for row in option_trades.to_dict("records"):
         action = str(row.get("action", "open")).lower()
+        quantity = abs(int(row.get("quantity") or 0))
         if action == "open":
             if current is None:
                 current = {
@@ -68,18 +69,18 @@ def _group_structures(option_trades: pd.DataFrame) -> list[dict[str, Any]]:
                     "opens": [],
                     "closes": [],
                     "premium_sum": 0.0,
-                    "iv_entry_vals": [],
-                    "iv_exit_vals": [],
+                    "open_qty": 0,
+                    "close_qty": 0,
                 }
             current["opens"].append(row)
+            current["open_qty"] += quantity
             current["premium_sum"] += float(row.get("premium") or 0.0)
         elif action in ("close", "expire") and current is not None:
             current["closes"].append(row)
+            current["close_qty"] += quantity
             current["exit_date"] = str(row["date"])[:10]
             current["premium_sum"] += float(row.get("premium") or 0.0)
-            open_qty = sum(abs(int(r.get("quantity") or 0)) for r in current["opens"])
-            close_qty = sum(abs(int(r.get("quantity") or 0)) for r in current["closes"])
-            if close_qty >= open_qty and current["exit_date"]:
+            if current["close_qty"] >= current["open_qty"] and current["exit_date"]:
                 structures.append(current)
                 current = None
     if current is not None and current["exit_date"]:
@@ -92,7 +93,7 @@ def _nearest_earnings(entry_date: str, earnings: pd.DataFrame | EarningsCalendar
     return calendar.nearest_earnings_row(entry_date, max_days=14)
 
 
-def _long_straddle_implied_move(opens: list[pd.Series], spot: float) -> float:
+def _long_straddle_implied_move(opens: list[Mapping[str, Any]], spot: float) -> float:
     if len(opens) != 2 or spot <= 0:
         return float("nan")
     sides = {str(leg.get("side", "")).lower() for leg in opens}

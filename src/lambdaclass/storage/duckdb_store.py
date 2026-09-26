@@ -1,9 +1,22 @@
 from __future__ import annotations
 
+import re
+from collections.abc import Sequence
+from datetime import date
 from pathlib import Path
+from typing import Any
 
 import duckdb
 import pandas as pd
+
+_NAME_PATTERN = re.compile(r"^[a-z][a-z0-9_]{0,63}$")
+
+
+def _checked_name(name: str) -> str:
+    """Dataset names become file names; keep them to a safe lowercase slug."""
+    if not _NAME_PATTERN.match(name):
+        raise ValueError(f"Invalid dataset name {name!r}; use lowercase letters, digits, and underscores")
+    return name
 
 
 class DuckDBStore:
@@ -64,6 +77,19 @@ class DuckDBStore:
             bars["dividends"] = pd.to_numeric(bars["dividends"], errors="coerce").fillna(0.0)
         return bars
 
+    def bar_date_range(self, symbol: str) -> tuple[str, str] | None:
+        """First and last stored bar date for ``symbol``, or ``None`` when nothing is stored."""
+        path = self._stock_path(symbol)
+        if not path.exists():
+            return None
+        with duckdb.connect() as con:
+            row = con.execute(
+                "SELECT min(date)::VARCHAR, max(date)::VARCHAR FROM read_parquet(?)", [str(path)]
+            ).fetchone()
+        if row is None or row[0] is None:
+            return None
+        return str(row[0])[:10], str(row[1])[:10]
+
     def write_chain(self, symbol: str, chain: pd.DataFrame) -> Path:
         if chain.empty:
             return self._options_path(symbol)
@@ -105,6 +131,99 @@ class DuckDBStore:
         frame = frame.sort_values("earnings_date").reset_index(drop=True)
         frame.to_parquet(path, index=False)
         return path
+
+    def _universe_path(self, name: str) -> Path:
+        return self.data_root / "universe" / f"{_checked_name(name)}.parquet"
+
+    def write_universe(self, name: str, universe: pd.DataFrame, *, as_of: date) -> Path:
+        """Replace the current ``name`` universe and keep a dated snapshot of it.
+
+        Snapshots preserve membership as of each fetch, since vendor lists only
+        describe the present.
+        """
+        frame = universe.copy()
+        frame["list_date"] = as_of.isoformat()
+        path = self._universe_path(name)
+        snapshot = (
+            self.data_root / "universe" / "snapshots" / _checked_name(name) / f"{as_of.isoformat()}.parquet"
+        )
+        snapshot.parent.mkdir(parents=True, exist_ok=True)
+        frame.to_parquet(snapshot, index=False)
+        frame.to_parquet(path, index=False)
+        return path
+
+    def read_universe(self, name: str, category: str | None = None) -> pd.DataFrame:
+        path = self._universe_path(name)
+        if not path.exists():
+            return pd.DataFrame(columns=["symbol", "name", "category", "list_date"])
+        frame = pd.read_parquet(path)
+        if category is not None:
+            frame = frame[frame["category"] == category]
+        return frame.reset_index(drop=True)
+
+    def earnings_day_path(self, day: date) -> Path:
+        return self.earnings_dir / "calendar" / f"{day.year:04d}" / f"{day.isoformat()}.parquet"
+
+    def write_earnings_day(self, day: date, rows: pd.DataFrame) -> Path:
+        """Cache one calendar day; empty days are written too so they are not refetched."""
+        path = self.earnings_day_path(day)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        rows.to_parquet(path, index=False)
+        return path
+
+    def read_earnings_day(self, day: date) -> pd.DataFrame | None:
+        path = self.earnings_day_path(day)
+        return pd.read_parquet(path) if path.exists() else None
+
+    def cached_earnings_days(self) -> set[date]:
+        root = self.earnings_dir / "calendar"
+        if not root.is_dir():
+            return set()
+        return {date.fromisoformat(path.stem) for path in root.glob("*/*.parquet")}
+
+    def read_earnings_calendar(
+        self,
+        *,
+        start: str | None = None,
+        end: str | None = None,
+        symbols: Sequence[str] | None = None,
+    ) -> pd.DataFrame:
+        """All cached calendar rows, optionally filtered by date range and symbols."""
+        root = self.earnings_dir / "calendar"
+        if not root.is_dir() or not any(root.glob("*/*.parquet")):
+            return pd.DataFrame()
+        query = "SELECT * FROM read_parquet(?, union_by_name = true)"
+        clauses: list[str] = []
+        params: list[Any] = [str(root / "*" / "*.parquet")]
+        if start:
+            clauses.append("earnings_date >= ?")
+            params.append(start)
+        if end:
+            clauses.append("earnings_date <= ?")
+            params.append(end)
+        if symbols is not None:
+            if not symbols:
+                return pd.DataFrame()
+            clauses.append("list_contains(?, symbol)")
+            params.append([symbol.upper() for symbol in symbols])
+        if clauses:
+            query = f"{query} WHERE {' AND '.join(clauses)}"
+        query += " ORDER BY earnings_date, symbol"
+        with duckdb.connect() as con:
+            return con.execute(query, params).df()
+
+    def _events_path(self, name: str) -> Path:
+        return self.earnings_dir / "events" / f"{_checked_name(name)}.parquet"
+
+    def write_earnings_events(self, name: str, events: pd.DataFrame) -> Path:
+        path = self._events_path(name)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        events.to_parquet(path, index=False)
+        return path
+
+    def read_earnings_events(self, name: str) -> pd.DataFrame:
+        path = self._events_path(name)
+        return pd.read_parquet(path) if path.exists() else pd.DataFrame()
 
     def read_earnings(
         self,

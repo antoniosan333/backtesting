@@ -52,7 +52,7 @@ All via `lambdaclass` (Python ≥ 3.11, `pip install -e ".[dev]"`).
 - **Config hash**: SHA1 of JSON-serialized full snapshot payload (preferences + raw strategy_params + cli_overrides), truncated — used in run_id, not the redacted file alone.
 - **Fetch**: Retries (3) with backoff on adapter failures.
 - **Storage**: `DuckDBStore` writes Parquet under `data/stocks/<SYMBOL>.parquet` and `data/options/<SYMBOL>.parquet`; append merges and dedupes by `(symbol, date)` / `(symbol, contract_symbol, asof)`.
-- **Backtest engine**: Bar loop; options chain keyed by `asof` string matching bar `date`; stock + options commission/slippage from prefs; open-options ledger with MTM and expiry settlement ([ADR-0005](docs/decisions/0005-options-engine-accounting.md)).
+- **Backtest engine**: Bar loop; indexed options chain keyed by `asof`; all-or-none option structures; immutable ledger view in `StrategyContext`; enforced `[risk]` limits; MTM and expiry settlement ([ADR-0005](docs/decisions/0005-options-engine-accounting.md), [ADR-0007](docs/decisions/0007-atomic-option-fills-and-risk-limits.md)).
 
 ## Where to look first
 
@@ -65,7 +65,8 @@ All via `lambdaclass` (Python ≥ 3.11, `pip install -e ".[dev]"`).
 | Strategy API | `src/lambdaclass/strategies/base.py` |
 | Run loop + outputs | `src/lambdaclass/backtest/engine.py` |
 | BSM / Greeks / mid quotes | `src/lambdaclass/options/pricing.py` |
-| Earnings calendar helpers | `src/lambdaclass/earnings/calendar.py` |
+| Option presets / payoff curves | `src/lambdaclass/options/presets.py`, `src/lambdaclass/options/payoff.py` |
+| Earnings calendar helpers | `src/lambdaclass/earnings/calendar.py` (`EarningsCalendar`) |
 | Metrics / HTML report / dashboard | `src/lambdaclass/reporting/` (`reporting/dashboard/` for Streamlit) |
 
 ## Auto-appended by continual-learning
@@ -77,7 +78,7 @@ The Cursor continual-learning stop-hook may append high-signal, durable facts be
 - On Windows, default `python` may resolve to the Microsoft Store stub; use a real Python 3.11+ on PATH (or the `py` launcher with an explicit version) before `pip install -e ".[dev]"` or `pytest`.
 - Root `.gitignore` keeps `.cursor/hooks/state/`, `data/`, `runs/`, `zRawData/`, and `state/*.json` local-only; commit small OptionsDX samples under `tests/fixtures/optionsdx/` unless you add a narrow un-ignore.
 - Streamlit dashboard defaults to loopback (`127.0.0.1`); to open it from another device on the same LAN use `lambdaclass dashboard --host 0.0.0.0`, browse to `http://<this-PC-LAN-IPv4>:<port>`, and allow the port through Windows Firewall if needed—`0.0.0.0` exposes the UI to the whole LAN.
-- GitHub CI is pytest-only (`.github/workflows/ci.yml`: install `-e ".[dev]"` then `pytest`; no OptionsDX normalization or rate gates on runners).
+- GitHub CI runs Ruff, mypy, and pytest on Python 3.11–3.13; it does not normalize OptionsDX data or enforce data-rate gates on runners.
 - `py-vollib` on PyPI is now a deprecated alias that redirects to `vollib`; prefer `vollib` when touching `pyproject.toml` or the pricing imports.
 - py-vollib/vollib analytical Greeks: `theta` is per calendar day (already ÷365) and `vega`/`rho` are per 1-percentage-point move (÷100) — do not label or rescale them as annual/per-unit values.
 - Backtest engine options accounting ([ADR-0005](docs/decisions/0005-options-engine-accounting.md)): open ledger, chain/BSM marks, intrinsic expiry settlement, `option_trades.csv` in run dirs; equity includes `options_mtm`.

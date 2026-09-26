@@ -12,9 +12,9 @@ dependencies = [
   "pyarrow>=18.0.0",
   "pydantic>=2.9.0",
   "vollib>=1.0.1",
-  "streamlit>=1.40",
+  "streamlit>=1.40,<2",
   "typer>=0.12.5",
-  "yfinance>=0.2.43",
+  "yfinance>=0.2.43,<1",
 ]
 
 [project.optional-dependencies]

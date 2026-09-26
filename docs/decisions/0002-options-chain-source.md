@@ -13,5 +13,6 @@ Add `[defaults].options_chain_source` with values `yfinance` (default) or `optio
 ## Consequences
 
 - Users must align stock bar dates with normalized `quote_date` for meaningful chain joins.
-- Large normalized trees are read with `pandas.read_parquet` per file under the symbol directory; a future ADR may optimize with DuckDB glob or partitioning if scan cost matters.
+- OptionsDX reads prune the symbol tree to the requested year/month partitions, then use DuckDB projection and date filtering. Legacy unpartitioned trees fall back to a recursive scan.
+- yfinance exposes only a current chain. Historical stock fetches skip the chain rather than labelling current quotes with a historical `asof`; current chains are stamped with today's date.
 - Frozen run snapshots include the new default key under `[defaults]` in `config.snapshot.toml` via existing `snapshot_preferences` behavior.

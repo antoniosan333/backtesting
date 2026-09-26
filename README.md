@@ -10,7 +10,7 @@ Backtesting-first project for stock and options strategies with:
 ## Project memory
 
 - **[AGENTS.md](AGENTS.md)** — repo map, CLI summary, conventions, links to package-level notes. The Cursor continual-learning hook may append durable facts below the marker at the bottom of that file.
-- **[docs/decisions/](docs/decisions/README.md)** — ADRs for significant choices (template + `0001` storage, `0002` options chain source, `0003` dashboard).
+- **[docs/decisions/](docs/decisions/README.md)** — ADRs for significant choices, including storage, data sources, the dashboard, options accounting, earnings, and atomic fills.
 
 ## Quick start
 
@@ -23,6 +23,20 @@ lambdaclass run demo
 ```
 
 Options chain source (for strategies that use `context.options_chain`): set `[defaults] options_chain_source = "optionsdx"` after running `normalize-optionsdx`, or pass `lambdaclass run STRATEGY --options-source optionsdx`. Default remains `yfinance` (`data/options/<SYMBOL>.parquet` from `fetch`).
+
+Strategy files are executable Python. Only run strategies you trust; treat
+`strategies/` as application code rather than an untrusted data directory.
+
+## Backtest assumptions
+
+- Decisions observe a completed bar and fill at that bar's close or option-chain mid. This same-bar model can introduce look-ahead bias; use results for research rather than execution-quality simulation.
+- Multi-leg option decisions are all-or-none. `reduce_only` close legs cannot create a reverse position.
+- Stock and option risk limits come from `[risk]`; cash cannot go negative unless `[defaults].allow_negative_cash = true`.
+- Options use European-style cash settlement at intrinsic value. Early exercise, assignment, dividends, borrow costs, and portfolio margin are not modeled.
+- Missing marks after a valid fill fall back to Black–Scholes.
+
+See [ADR-0005](docs/decisions/0005-options-engine-accounting.md) and
+[ADR-0007](docs/decisions/0007-atomic-option-fills-and-risk-limits.md).
 
 ## Dashboard
 

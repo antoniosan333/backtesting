@@ -17,7 +17,12 @@ from lambdaclass.data_adapters.cboe_weeklys import download_cboe_weeklys, parse_
 from lambdaclass.data_adapters.nasdaq_earnings import NasdaqEarningsAdapter
 from lambdaclass.data_adapters.yfinance_adapter import YFinanceAdapter
 from lambdaclass.earnings.events import apply_event_timing, build_earnings_events, summarize_events_by_symbol
-from lambdaclass.earnings.history import merge_calendar_day, plan_calendar_days, symbol_earnings_frames
+from lambdaclass.earnings.history import (
+    combine_earnings_sources,
+    merge_calendar_day,
+    plan_calendar_days,
+    symbol_earnings_frames,
+)
 from lambdaclass.retry import with_retry
 from lambdaclass.state import load_json, save_json
 from lambdaclass.storage.duckdb_store import DuckDBStore
@@ -27,6 +32,7 @@ SUMMARY_NAME = f"{UNIVERSE_NAME}_summary"
 CATEGORIES = ("equity", "etp", "all")
 RETRY_DELAY_SECONDS = 2.0
 COVERAGE_SLACK_DAYS = 5
+UNIVERSE_SOURCES = frozenset({"nasdaq", "yahoo", "nasdaq+yahoo"})
 Result = TypeVar("Result")
 
 universe_app = typer.Typer(help="Weekly-options universe, earnings history, and earnings reaction events.")
@@ -194,14 +200,12 @@ def fetch_earnings(
     end: str | None = typer.Option(
         None, help="Last calendar day (default: today + 28 days, for upcoming reports)"
     ),
-    category: str = typer.Option(
-        "all", help="Universe symbols to write per-symbol files for: equity, etp, or all"
-    ),
+    category: str = typer.Option("all", help="Universe symbols to report on: equity, etp, or all"),
     refresh_days: int = typer.Option(7, min=0, help="Refetch cached days this recent (and all future days)"),
     include_weekends: bool = typer.Option(False, help="Also query Saturdays and Sundays"),
     pause: float = typer.Option(0.2, min=0.0, help="Seconds to wait between calendar requests"),
 ) -> None:
-    """Fetch the Nasdaq earnings calendar day by day, then write per-symbol earnings files.
+    """Fetch the Nasdaq earnings calendar day by day (EPS, surprise, upcoming timing).
 
     Every day is cached under ``data/earnings/calendar/`` (all companies, not only
     the universe), so reruns only request missing, recent, and upcoming days.
@@ -240,9 +244,6 @@ def fetch_earnings(
     calendar = store.read_earnings_calendar(
         start=start_dt.isoformat(), end=end_dt.isoformat(), symbols=symbols
     )
-    frames = symbol_earnings_frames(calendar, symbols)
-    for symbol, frame in frames.items():
-        store.write_earnings(symbol, frame)
     markers_path = root / "state" / "earnings_fetch_markers.json"
     markers = load_json(markers_path)
     markers[UNIVERSE_NAME] = {
@@ -250,17 +251,94 @@ def fetch_earnings(
         "end": end_dt.isoformat(),
         "days_requested": len(days),
         "days_failed": sorted(failures),
-        "symbols_with_events": len(frames),
+        "universe_reports": len(calendar),
         "source": "nasdaq",
         "updated_at": _stamp(),
     }
     save_json(markers_path, markers)
     typer.echo(
-        f"Earnings: {len(calendar)} universe reports across {len(frames)} of {len(symbols)} symbols; "
+        f"Earnings: {len(calendar)} universe reports across {calendar['symbol'].nunique() if len(calendar) else 0} "
+        f"of {len(symbols)} symbols; "
         f"{len(days) - len(failures)}/{len(days)} days fetched"
     )
     for day_text, reason in sorted(failures.items()):
         typer.secho(f"  {day_text}: {reason}", fg=typer.colors.YELLOW, err=True)
+
+
+@universe_app.command("fetch-yahoo-earnings")
+def fetch_yahoo_earnings(
+    category: str = typer.Option("equity", help="equity, etp, or all (ETPs have no earnings)"),
+    max_age_days: float = typer.Option(7.0, min=0.0, help="Skip symbols fetched more recently than this"),
+    pause: float = typer.Option(0.0, min=0.0, help="Seconds to wait between symbols"),
+) -> None:
+    """Fetch up to 100 quarters per symbol from Yahoo, with the announcement time (BMO/AMC).
+
+    Stored under ``data/earnings/yahoo/<SYMBOL>.parquet``; ``build-events`` merges it
+    with the Nasdaq calendar.
+    """
+    root, _, store = _project()
+    symbols = _universe_symbols(store, category)
+    adapter = _bars_adapter()
+    now = time.time()
+    fetched = skipped = empty = 0
+    failures: dict[str, str] = {}
+    for position, symbol in enumerate(symbols, start=1):
+        path = store.yahoo_earnings_path(symbol)
+        if path.exists() and (now - path.stat().st_mtime) < max_age_days * 86_400:
+            skipped += 1
+            continue
+        try:
+            history = _retry(partial(adapter.get_earnings_dates, symbol))
+        except Exception as exc:
+            failures[symbol] = str(exc)
+            continue
+        store.write_yahoo_earnings(symbol, history)
+        fetched += 1
+        empty += int(history.empty)
+        if position % 50 == 0:
+            typer.echo(f"  {position}/{len(symbols)} symbols processed")
+        if pause:
+            time.sleep(pause)
+    markers_path = root / "state" / "earnings_fetch_markers.json"
+    markers = load_json(markers_path)
+    markers[f"{UNIVERSE_NAME}_yahoo"] = {
+        "fetched": fetched,
+        "empty": empty,
+        "failed": sorted(failures),
+        "source": "yahoo",
+        "updated_at": _stamp(),
+    }
+    save_json(markers_path, markers)
+    typer.echo(
+        f"Yahoo earnings: fetched={fetched} (no earnings: {empty}) skipped={skipped} "
+        f"failed={len(failures)} of {len(symbols)} symbols"
+    )
+    for symbol, reason in sorted(failures.items()):
+        typer.secho(f"  {symbol}: {reason}", fg=typer.colors.YELLOW, err=True)
+
+
+def _load_universe_calendar(
+    store: DuckDBStore, symbols: list[str], *, start: str | None, end: str | None
+) -> pd.DataFrame:
+    nasdaq = store.read_earnings_calendar(start=start, end=end, symbols=symbols)
+    yahoo = store.read_yahoo_earnings_many(symbols)
+    if not yahoo.empty:
+        dates = yahoo["earnings_date"].astype(str)
+        yahoo = yahoo[(dates >= (start or "")) & (dates <= (end or "9999-12-31"))]
+    return combine_earnings_sources(nasdaq, yahoo)
+
+
+def _publish_symbol_earnings(
+    store: DuckDBStore, calendar: pd.DataFrame, events: pd.DataFrame, symbols: list[str]
+) -> int:
+    """Rewrite universe rows in ``data/earnings/<SYMBOL>.parquet`` (other sources are kept)."""
+    frames = symbol_earnings_frames(calendar.assign(fetched_at=_stamp()), symbols)
+    if not frames:
+        return 0
+    earnings = apply_event_timing(pd.concat(frames.values(), ignore_index=True), events)
+    for symbol, frame in earnings.groupby("symbol", sort=False):
+        store.write_earnings(str(symbol), frame, replace_sources=UNIVERSE_SOURCES)
+    return len(frames)
 
 
 def _timing_agreement(events: pd.DataFrame) -> str:
@@ -268,7 +346,7 @@ def _timing_agreement(events: pd.DataFrame) -> str:
     if checked.empty:
         return "no vendor timings to check inference against"
     rate = float((checked["vendor_timing"] == checked["inferred_timing"]).mean())
-    return f"gap inference matches vendor timing on {rate:.0%} of {len(checked)} events"
+    return f"gap inference alone matches vendor timing on {rate:.0%} of {len(checked)} events"
 
 
 @universe_app.command("build-events")
@@ -286,10 +364,11 @@ def build_events(
     if end:
         _parse_date(end, "--end")
     symbols = _universe_symbols(store, category)
-    calendar = store.read_earnings_calendar(start=start, end=end, symbols=symbols)
+    calendar = _load_universe_calendar(store, symbols, start=start, end=end)
     if calendar.empty:
         raise typer.BadParameter(
-            "No cached earnings for the universe; run `lambdaclass universe fetch-earnings`."
+            "No cached earnings for the universe; run `lambdaclass universe fetch-earnings` "
+            "and/or `fetch-yahoo-earnings`."
         )
     reporting_symbols = sorted(set(calendar["symbol"]))
     bars_by_symbol = store.read_bars_many(reporting_symbols)
@@ -301,17 +380,12 @@ def build_events(
     events_path = store.write_earnings_events(UNIVERSE_NAME, events)
     summary = summarize_events_by_symbol(events, min_events=min_events)
     summary_path = store.write_earnings_events(SUMMARY_NAME, summary)
-    earnings = store.read_earnings_many(sorted(set(events["symbol"])))
-    updated = apply_event_timing(earnings, events)
-    if not updated.empty:
-        before = earnings.reindex(columns=["timing", "timing_source"]).fillna("")
-        changed = updated[["timing", "timing_source"]].fillna("").ne(before).any(axis=1)
-        for symbol in updated.loc[changed, "symbol"].unique():
-            store.write_earnings(str(symbol), updated[updated["symbol"] == symbol])
+    published = _publish_symbol_earnings(store, calendar, events, symbols)
     no_bars = len(reporting_symbols) - len(bars_by_symbol)
     typer.echo(
         f"Events: {len(events)} across {events['symbol'].nunique()} symbols → {events_path}\n"
         f"Summary: {len(summary)} symbols with >= {min_events} events → {summary_path}\n"
+        f"Per-symbol earnings files updated: {published}\n"
         f"Timing: {events['timing_source'].value_counts().to_dict()}; {_timing_agreement(events)}"
     )
     if no_bars:

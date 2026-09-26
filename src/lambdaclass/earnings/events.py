@@ -2,8 +2,9 @@
 
 Each calendar row is matched to daily bars. The *reaction bar* is the first
 session that trades on the news: the report day for BMO (before market open),
-the next session for AMC (after market close). Historical vendor timing is often
-missing, so it is inferred from which overnight gap is larger:
+the next session for AMC (after market close). Vendor timing (Yahoo timestamps,
+Nasdaq upcoming days) is used when known; otherwise it is inferred from which
+overnight gap is larger:
 
 * BMO when ``|open[D] / close[D-1] - 1| >= |open[D+1] / close[D] - 1|``
 * AMC otherwise
@@ -40,6 +41,8 @@ EVENT_COLUMNS = [
     "timing",
     "timing_source",
     "vendor_timing",
+    "timing_vendor",
+    "announce_time",
     "inferred_timing",
     "timing_confidence",
     "symbol_timing",
@@ -98,6 +101,10 @@ class BarSeries:
 
     def __len__(self) -> int:
         return len(self.dates)
+
+
+def _text_or_none(value: object) -> str | None:
+    return None if value is None or (isinstance(value, float) and np.isnan(value)) else str(value)
 
 
 def _ratio(numerator: float, denominator: float) -> float:
@@ -223,6 +230,8 @@ def _event_row(
         "timing": timing,
         "timing_source": timing_source,
         "vendor_timing": placement.vendor_timing,
+        "timing_vendor": calendar_row.get("timing_vendor") if placement.vendor_timing else None,
+        "announce_time": _text_or_none(calendar_row.get("announce_time")),
         "inferred_timing": placement.inferred,
         "timing_confidence": placement.confidence,
         "symbol_timing": symbol_timing,

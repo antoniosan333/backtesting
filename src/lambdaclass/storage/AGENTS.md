@@ -13,9 +13,10 @@ Root: `Preferences.paths.data_dir` (default `data/`).
 | `write_universe` / `read_universe` | `data/universe/<name>.parquet` + `data/universe/snapshots/<name>/<date>.parquet` | replaced on write (adds `list_date`) |
 | `write_earnings_day` / `read_earnings_day` / `cached_earnings_days` | `data/earnings/calendar/<YYYY>/<date>.parquet` (all reporters that day; empty days too) | replaced on write |
 | `read_earnings_calendar(start, end, symbols)` | glob over the calendar cache (`union_by_name`) | — |
+| `write_yahoo_earnings` / `read_yahoo_earnings_many` | `data/earnings/yahoo/<SYMBOL>.parquet` | replaced on write (empty results too) |
 | `write_earnings_events` / `read_earnings_events` | `data/earnings/events/<name>.parquet` | replaced on write |
 
-`bar_date_range(symbol)` returns stored `(min, max)` bar dates. `read_bars_many` / `read_earnings_many` read many symbols in one DuckDB query; prefer them in loops, since each `duckdb.connect()` costs several milliseconds. Dataset `name`s must match `^[a-z][a-z0-9_]{0,63}$` (they become file names). See [ADR-0010](../../../docs/decisions/0010-weekly-options-earnings-universe.md).
+`write_earnings(..., replace_sources=...)` drops existing rows with those `source` values before merging. `bar_date_range(symbol)` returns stored `(min, max)` bar dates. `read_bars_many` / `read_earnings_many` read many symbols in one DuckDB query; prefer them in loops, since each `duckdb.connect()` costs several milliseconds. Dataset `name`s must match `^[a-z][a-z0-9_]{0,63}$` (they become file names). See [ADR-0010](../../../docs/decisions/0010-weekly-options-earnings-universe.md).
 
 Bar columns: `date`, `open`, `high`, `low`, `close` (split-adjusted, not dividend-adjusted), `volume`, `dividends` (cash per share on the ex-date). `read_bars` backfills a missing `dividends` column with `0.0` and sets `bars.attrs["dividends_backfilled"] = True`.
 

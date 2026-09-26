@@ -35,9 +35,10 @@ All via `lambdaclass` (Python ≥ 3.11, `pip install -e ".[dev]"`).
 | `fetch SYMBOL --start YYYY-MM-DD [--end]` | yfinance → Parquet append + dedupe; updates `state/fetch_markers.json` |
 | `fetch-earnings SYMBOL [--csv PATH]` | Earnings calendar → `data/earnings/<SYMBOL>.parquet` (yfinance or CSV); `state/earnings_fetch_markers.json` |
 | `universe fetch-weeklys [--csv]` / `universe show` | Cboe weekly-options list (equity + ETP) → universe Parquet + dated snapshot |
-| `universe fetch-earnings --start [--end] [--refresh-days]` | Nasdaq earnings calendar per day (cached) → per-symbol `data/earnings/<SYMBOL>.parquet` for universe names |
+| `universe fetch-yahoo-earnings [--category] [--max-age-days]` | Yahoo earnings history (≤100 quarters, announcement time → BMO/AMC) → `data/earnings/yahoo/<SYMBOL>.parquet` |
+| `universe fetch-earnings --start [--end] [--refresh-days]` | Nasdaq earnings calendar per day (cached; EPS, surprise, upcoming timing) |
 | `universe fetch-bars --start [--end] [--category]` | yfinance bars for every universe symbol (skips covered windows) |
-| `universe build-events [--category] [--min-events]` | Earnings reaction events + per-symbol summary; infers BMO/AMC from gaps ([ADR-0010](docs/decisions/0010-weekly-options-earnings-universe.md)) |
+| `universe build-events [--category] [--min-events]` | Merge Yahoo + Nasdaq, build reaction events + per-symbol summary, publish `data/earnings/<SYMBOL>.parquet`; gap inference only where no vendor timing ([ADR-0010](docs/decisions/0010-weekly-options-earnings-universe.md)) |
 | `new-strategy NAME` | Scaffold under current month folder |
 | `run STRATEGY [--symbol] [--start/--end] [--options-source …] [--param key=value …] [--fail-on-rejected-orders]` | Backtest; `--options-source yfinance` or `optionsdx` (default: `[defaults].options_chain_source`); `--param` overrides `StrategyImpl.params` |
 | `sweep STRATEGY --grid key=a,b [--grid key=start:stop:step] [--param …] [--metric] [--jobs N] [--max-combos]` | Run every grid combination as a normal run + write a sweep summary ([ADR-0009](docs/decisions/0009-parameter-sweeps.md)) |
@@ -88,6 +89,7 @@ The Cursor continual-learning stop-hook may append high-signal, durable facts be
 - Root `.gitignore` keeps `.cursor/hooks/state/`, `data/`, `runs/`, `zRawData/`, and `state/*.json` local-only; commit small OptionsDX samples under `tests/fixtures/optionsdx/` unless you add a narrow un-ignore.
 - Streamlit dashboard defaults to loopback (`127.0.0.1`); to open it from another device on the same LAN use `lambdaclass dashboard --host 0.0.0.0`, browse to `http://<this-PC-LAN-IPv4>:<port>`, and allow the port through Windows Firewall if needed—`0.0.0.0` exposes the UI to the whole LAN.
 - GitHub CI runs Ruff, mypy, and pytest on Python 3.11–3.13; it does not normalize OptionsDX data or enforce data-rate gates on runners.
+- yfinance `get_earnings_dates` needs `lxml` (a dependency since ADR-0010) and caps `limit` at 100; a midnight-UTC timestamp means the time of day is unknown.
 - `py-vollib` on PyPI is now a deprecated alias that redirects to `vollib`; prefer `vollib` when touching `pyproject.toml` or the pricing imports.
 - py-vollib/vollib analytical Greeks: `theta` is per calendar day (already ÷365) and `vega`/`rho` are per 1-percentage-point move (÷100) — do not label or rescale them as annual/per-unit values.
 - Backtest engine options accounting ([ADR-0005](docs/decisions/0005-options-engine-accounting.md)): open ledger, chain/BSM marks, intrinsic expiry settlement, `option_trades.csv` in run dirs; equity includes `options_mtm`.

@@ -14,6 +14,7 @@ from typer.testing import CliRunner
 
 from lambdaclass import cli, cli_universe
 from lambdaclass.data_adapters.nasdaq_earnings import empty_earnings_day, parse_nasdaq_earnings_rows
+from lambdaclass.data_adapters.yfinance_adapter import YAHOO_EARNINGS_COLUMNS, parse_yahoo_earnings_dates
 from lambdaclass.earnings.events import (
     BarSeries,
     apply_event_timing,
@@ -21,7 +22,12 @@ from lambdaclass.earnings.events import (
     infer_timing,
     summarize_events_by_symbol,
 )
-from lambdaclass.earnings.history import merge_calendar_day, plan_calendar_days, symbol_earnings_frames
+from lambdaclass.earnings.history import (
+    combine_earnings_sources,
+    merge_calendar_day,
+    plan_calendar_days,
+    symbol_earnings_frames,
+)
 from lambdaclass.retry import with_retry
 from lambdaclass.storage.duckdb_store import DuckDBStore
 
@@ -40,6 +46,21 @@ def _nasdaq_day(day: str) -> pd.DataFrame:
     payload = json.loads((FIXTURES / "nasdaq" / "earnings_days.json").read_text(encoding="utf-8"))
     rows = payload.get(day, {"data": {"rows": None}})["data"]["rows"] or []
     return parse_nasdaq_earnings_rows(rows, date.fromisoformat(day))
+
+
+def _yahoo_raw(
+    stamps: list[str],
+    *,
+    estimates: list[float] | None = None,
+    actuals: list[float] | None = None,
+    tz: str = "America/New_York",
+) -> pd.DataFrame:
+    """A frame shaped like ``yfinance.Ticker.get_earnings_dates`` output."""
+    index = pd.DatetimeIndex(pd.to_datetime(stamps), name="Earnings Date").tz_localize(tz)
+    nan = [float("nan")] * len(stamps)
+    return pd.DataFrame(
+        {"EPS Estimate": estimates or nan, "Reported EPS": actuals or nan, "Surprise(%)": nan}, index=index
+    )
 
 
 def _synthetic_bars(start: str, end: str, *, gaps: dict[str, float]) -> pd.DataFrame:
@@ -166,6 +187,79 @@ def test_symbol_earnings_frames_use_canonical_schema() -> None:
     assert list(nvda.columns[:5]) == ["symbol", "earnings_date", "timing", "source", "fetched_at"]
     assert nvda["timing_source"].tolist() == ["none"]
     assert frames["SCHW"]["timing_source"].tolist() == ["vendor"]
+
+
+def test_parse_yahoo_earnings_dates_maps_announcement_times() -> None:
+    raw = _yahoo_raw(
+        ["2025-01-15 06:00", "2025-01-16 12:30", "2025-01-29 16:05", "2025-04-22 20:00", "2025-04-22 20:00"],
+        actuals=[1.0, 2.0, 3.0, 4.0, 5.0],
+    )
+    frame = parse_yahoo_earnings_dates(raw)
+
+    assert list(frame.columns) == YAHOO_EARNINGS_COLUMNS
+    assert frame["earnings_date"].tolist() == ["2025-01-15", "2025-01-16", "2025-01-29", "2025-04-23"]
+    # 20:00 New York in April is midnight UTC: Yahoo's "date known, time unknown" marker.
+    assert frame["timing"].tolist() == ["BMO", "unknown", "AMC", "unknown"]
+    assert frame["announce_time"].tolist() == ["06:00", "12:30", "16:05", None]
+    assert frame["eps_actual"].tolist() == [1.0, 2.0, 3.0, 4.0]
+    assert parse_yahoo_earnings_dates(None).empty
+    assert list(parse_yahoo_earnings_dates(None).columns) == YAHOO_EARNINGS_COLUMNS
+
+
+def test_combine_earnings_sources_prefers_yahoo_timing_and_nasdaq_eps() -> None:
+    nasdaq = pd.DataFrame(
+        {
+            "symbol": ["AAA", "AAA", "BBB", "CCC"],
+            "earnings_date": ["2025-01-29", "2025-04-23", "2025-02-05", "2025-03-03"],
+            "timing": ["unknown", "unknown", "BMO", "unknown"],
+            "eps_actual": [1.0, np.nan, 2.0, 3.0],
+            "eps_estimate": [0.9, 1.1, 1.9, 2.9],
+            "surprise_pct": [11.0, np.nan, 5.0, 3.0],
+        }
+    )
+    yahoo = pd.DataFrame(
+        {
+            "symbol": ["AAA", "AAA", "AAA", "BBB"],
+            "earnings_date": ["2024-10-23", "2025-01-29", "2025-04-24", "2025-02-05"],
+            "timing": ["AMC", "AMC", "BMO", "unknown"],
+            "announce_time": ["16:05", "16:05", "07:00", None],
+            "eps_actual": [0.8, 0.99, 1.2, 2.1],
+            "eps_estimate": [0.7, 0.9, 1.0, 1.8],
+            "surprise_pct": [14.0, 10.0, 20.0, 16.0],
+        }
+    )
+    combined = combine_earnings_sources(nasdaq, yahoo).set_index(["symbol", "earnings_date"])
+
+    assert list(combined.index) == [
+        ("AAA", "2024-10-23"),
+        ("AAA", "2025-01-29"),
+        ("AAA", "2025-04-24"),
+        ("BBB", "2025-02-05"),
+        ("CCC", "2025-03-03"),
+    ]
+    assert combined.loc[("AAA", "2024-10-23"), "source"] == "yahoo"
+    paired = combined.loc[("AAA", "2025-01-29")]
+    assert (paired["timing"], paired["timing_vendor"], paired["source"]) == ("AMC", "yahoo", "nasdaq+yahoo")
+    assert paired["eps_actual"] == 1.0  # Nasdaq EPS wins
+    moved = combined.loc[("AAA", "2025-04-24")]  # Yahoo knows the time, so its date wins
+    assert moved["timing"] == "BMO" and moved["eps_actual"] == 1.2  # filled from Yahoo
+    bbb = combined.loc[("BBB", "2025-02-05")]
+    assert (bbb["timing"], bbb["timing_vendor"]) == ("BMO", "nasdaq")
+    assert combined.loc[("CCC", "2025-03-03"), "source"] == "nasdaq"
+    assert combine_earnings_sources(nasdaq.head(0), yahoo.head(0)).empty
+    assert len(combine_earnings_sources(nasdaq, yahoo.head(0))) == 4
+
+
+def test_write_earnings_replace_sources_keeps_other_sources(tmp_path: Path) -> None:
+    store = DuckDBStore(tmp_path)
+    store.write_earnings("AAA", pd.DataFrame({"earnings_date": ["2020-01-01"], "source": ["csv"]}))
+    store.write_earnings("AAA", pd.DataFrame({"earnings_date": ["2025-01-28"], "source": ["nasdaq"]}))
+    store.write_earnings(
+        "AAA",
+        pd.DataFrame({"earnings_date": ["2025-01-29"], "source": ["nasdaq+yahoo"]}),
+        replace_sources={"nasdaq"},
+    )
+    assert store.read_earnings("AAA")["earnings_date"].tolist() == ["2020-01-01", "2025-01-29"]
 
 
 # --- events --------------------------------------------------------------------------------
@@ -372,6 +466,16 @@ class _FakeBars:
         gaps = {"CRM": {"2025-02-26": 0.09}, "NVDA": {"2025-02-27": -0.07}}.get(symbol, {})
         return _synthetic_bars(start.isoformat(), end.isoformat(), gaps=gaps)
 
+    def get_earnings_dates(self, symbol: str) -> pd.DataFrame:
+        self.requested.append(f"earnings:{symbol}")
+        if symbol == "NVDA":
+            return parse_yahoo_earnings_dates(
+                _yahoo_raw(
+                    ["2024-11-20 16:20", "2025-02-26 16:20"], estimates=[0.75, 0.84], actuals=[0.81, 0.89]
+                )
+            )
+        return parse_yahoo_earnings_dates(None)
+
 
 @pytest.fixture()
 def universe_project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
@@ -401,9 +505,6 @@ def test_universe_cli_end_to_end(universe_project: Path, monkeypatch: pytest.Mon
     assert result.exit_code == 0, result.output
     assert len(nasdaq.requested) == 5
     store = DuckDBStore(universe_project / "data")
-    assert store.read_earnings("NVDA")["earnings_date"].tolist() == ["2025-02-26"]
-    assert store.read_earnings("PBR-A")["eps_actual"].tolist() == [0.49]
-    assert store.read_earnings("SNOW").empty  # not in the universe, but cached in the day file
     assert "SNOW" in set(store.read_earnings_day(date(2025, 2, 26))["symbol"])
 
     nasdaq.requested.clear()
@@ -430,15 +531,37 @@ def test_universe_cli_end_to_end(universe_project: Path, monkeypatch: pytest.Mon
     assert "fetched=0 skipped=2 failed=1" in result.output
     assert bars.requested == ["PBR-A"] * 3  # retried, never skipped
 
+    bars.requested.clear()
+    result = runner.invoke(cli.app, ["universe", "fetch-yahoo-earnings"])
+    assert result.exit_code == 0, result.output
+    assert "fetched=3 (no earnings: 2) skipped=0 failed=0" in result.output
+    assert bars.requested == ["earnings:CRM", "earnings:NVDA", "earnings:PBR-A"]
+    result = runner.invoke(cli.app, ["universe", "fetch-yahoo-earnings"])
+    assert "fetched=0 (no earnings: 0) skipped=3" in result.output
+
+    store.write_earnings(
+        "CRM", pd.DataFrame({"earnings_date": ["2019-06-04"], "timing": ["AMC"], "source": ["csv"]})
+    )
     result = runner.invoke(cli.app, ["universe", "build-events", "--min-events", "1"])
     assert result.exit_code == 0, result.output
     events = store.read_earnings_events("weekly_options").set_index("symbol")
     assert events.loc["CRM", "timing"] == "BMO"
-    assert events.loc["NVDA", "timing"] == "AMC"
+    assert events.loc["CRM", "timing_source"] == "inferred_gap"
+    nvda = events.loc["NVDA"]
+    assert (nvda["timing"], nvda["timing_source"], nvda["timing_vendor"]) == ("AMC", "vendor", "yahoo")
+    assert nvda["announce_time"] == "16:20" and nvda["eps_actual"] == pytest.approx(0.85)
     assert "PBR-A" not in events.index
     assert set(store.read_earnings_events("weekly_options_summary")["symbol"]) == {"CRM", "NVDA"}
-    assert store.read_earnings("NVDA")["timing"].tolist() == ["AMC"]
-    assert store.read_earnings("NVDA")["timing_source"].tolist() == ["inferred_gap"]
+    nvda_file = store.read_earnings("NVDA")
+    assert nvda_file["earnings_date"].tolist() == ["2024-11-20", "2025-02-26"]
+    assert nvda_file["source"].tolist() == ["yahoo", "nasdaq+yahoo"]
+    assert nvda_file["timing_source"].tolist() == ["vendor", "vendor"]
+    crm_file = store.read_earnings("CRM")
+    assert crm_file["source"].tolist() == ["csv", "nasdaq"]  # user-imported rows survive
+    assert crm_file["timing_source"].tolist()[-1] == "inferred_gap"
+    assert store.read_earnings("PBR-A")["eps_actual"].tolist() == [0.49]
+    assert store.read_earnings("SNOW").empty  # not in the universe, but cached in the day file
+    assert "Per-symbol earnings files updated: 3" in result.output
     assert "1 symbols have earnings but no stored bars" in result.output
 
 

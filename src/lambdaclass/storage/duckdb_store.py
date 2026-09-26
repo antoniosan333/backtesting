@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Sequence
+from collections.abc import Collection, Sequence
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -138,8 +138,18 @@ class DuckDBStore:
         with duckdb.connect() as con:
             return con.execute(query, params).df()
 
-    def write_earnings(self, symbol: str, earnings: pd.DataFrame) -> Path:
-        """Append/dedupe earnings calendar rows for ``symbol``."""
+    def write_earnings(
+        self,
+        symbol: str,
+        earnings: pd.DataFrame,
+        *,
+        replace_sources: Collection[str] = (),
+    ) -> Path:
+        """Append/dedupe earnings calendar rows for ``symbol``.
+
+        Existing rows whose ``source`` is in ``replace_sources`` are dropped first,
+        so a source can restate its dates without leaving stale neighbours behind.
+        """
         path = self._earnings_path(symbol)
         if earnings is None or earnings.empty:
             return path
@@ -147,6 +157,8 @@ class DuckDBStore:
         frame["symbol"] = symbol.upper()
         if path.exists():
             existing = pd.read_parquet(path)
+            if replace_sources and "source" in existing.columns:
+                existing = existing[~existing["source"].isin(list(replace_sources))]
             frame = pd.concat([existing, frame], ignore_index=True)
         frame = frame.drop_duplicates(subset=["symbol", "earnings_date"], keep="last")
         frame = frame.sort_values("earnings_date").reset_index(drop=True)
@@ -245,6 +257,21 @@ class DuckDBStore:
     def read_earnings_events(self, name: str) -> pd.DataFrame:
         path = self._events_path(name)
         return pd.read_parquet(path) if path.exists() else pd.DataFrame()
+
+    def yahoo_earnings_path(self, symbol: str) -> Path:
+        return self.earnings_dir / "yahoo" / f"{symbol.upper()}.parquet"
+
+    def write_yahoo_earnings(self, symbol: str, frame: pd.DataFrame) -> Path:
+        """Replace the Yahoo earnings history for ``symbol``; empty results are written too."""
+        path = self.yahoo_earnings_path(symbol)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        frame.assign(symbol=symbol.upper()).to_parquet(path, index=False)
+        return path
+
+    def read_yahoo_earnings_many(self, symbols: Sequence[str]) -> pd.DataFrame:
+        return self._read_many(
+            [self.yahoo_earnings_path(symbol) for symbol in symbols], order_by="symbol, earnings_date"
+        )
 
     def read_earnings_many(self, symbols: Sequence[str]) -> pd.DataFrame:
         """Stored per-symbol earnings rows for many symbols in one query."""

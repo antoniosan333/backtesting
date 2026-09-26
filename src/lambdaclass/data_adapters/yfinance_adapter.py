@@ -2,10 +2,23 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 
+import numpy as np
 import pandas as pd
 import yfinance as yf
 
 BAR_COLUMNS = ["date", "open", "high", "low", "close", "volume", "dividends"]
+YAHOO_EARNINGS_COLUMNS = [
+    "earnings_date",
+    "timing",
+    "announce_time",
+    "eps_estimate",
+    "eps_actual",
+    "surprise_pct",
+]
+YAHOO_EARNINGS_LIMIT = 100
+MARKET_OPEN_HOUR = 9.5
+MARKET_CLOSE_HOUR = 16.0
+_NEW_YORK = "America/New_York"
 
 
 class YFinanceAdapter:
@@ -95,42 +108,61 @@ class YFinanceAdapter:
             ]
         ]
 
-    def get_earnings_dates(self, symbol: str, limit: int = 40) -> pd.DataFrame:
-        """Return raw earnings dates; empty frame when unavailable.
+    def get_earnings_dates(self, symbol: str, limit: int = YAHOO_EARNINGS_LIMIT) -> pd.DataFrame:
+        """Up to ``limit`` (max 100) past and upcoming reports; see ``parse_yahoo_earnings_dates``.
 
-        Columns: ``earnings_date``, ``timing`` (vendor string; normalize via
-        ``lambdaclass.earnings.calendar.normalize_earnings_frame``).
+        Network and parsing errors propagate so callers can retry; symbols without
+        earnings (ETFs, unknown tickers) return an empty frame.
         """
-        ticker = yf.Ticker(symbol)
-        raw: pd.DataFrame | None = None
-        try:
-            if hasattr(ticker, "get_earnings_dates"):
-                raw = ticker.get_earnings_dates(limit=limit)
-            elif hasattr(ticker, "earnings_dates") and ticker.earnings_dates is not None:
-                raw = ticker.earnings_dates
-        except Exception:
-            return pd.DataFrame(columns=["earnings_date", "timing"])
-        if raw is None or raw.empty:
-            return pd.DataFrame(columns=["earnings_date", "timing"])
-        frame = raw.reset_index()
-        # Index is often the earnings datetime
-        date_col = None
-        for candidate in ("Earnings Date", "earnings_date", "Date", "index", frame.columns[0]):
-            if candidate in frame.columns:
-                date_col = candidate
-                break
-        if date_col is None:
-            return pd.DataFrame(columns=["earnings_date", "timing"])
-        timing_col = None
-        for candidate in ("Event Type", "Earnings Timing", "timing", "Time"):
-            if candidate in frame.columns:
-                timing_col = candidate
-                break
-        out = pd.DataFrame(
-            {
-                "earnings_date": pd.to_datetime(frame[date_col], errors="coerce").dt.strftime("%Y-%m-%d"),
-                "timing": frame[timing_col] if timing_col else "unknown",
-            }
+        raw = yf.Ticker(symbol).get_earnings_dates(limit=min(limit, YAHOO_EARNINGS_LIMIT))
+        return parse_yahoo_earnings_dates(raw)
+
+
+def parse_yahoo_earnings_dates(raw: pd.DataFrame | None) -> pd.DataFrame:
+    """Normalize ``Ticker.get_earnings_dates`` output to ``YAHOO_EARNINGS_COLUMNS``.
+
+    The index holds the announcement time. Before 09:30 New York time is ``BMO``,
+    16:00 or later is ``AMC``, and in-session releases are ``unknown``. Yahoo marks
+    a report with no known time as midnight UTC (19:00/20:00 New York the day
+    before), so those keep their UTC date and get ``unknown`` timing.
+    """
+    if raw is None or raw.empty:
+        return pd.DataFrame(
+            {column: pd.Series(dtype=_yahoo_dtype(column)) for column in YAHOO_EARNINGS_COLUMNS}
         )
-        out = out.dropna(subset=["earnings_date"])
-        return out.reset_index(drop=True)
+    stamps = pd.DatetimeIndex(pd.to_datetime(raw.index))
+    if stamps.tz is None:
+        stamps = stamps.tz_localize(_NEW_YORK)
+    utc = stamps.tz_convert("UTC")
+    local = stamps.tz_convert(_NEW_YORK)
+    date_only = (utc.hour == 0) & (utc.minute == 0) & (utc.second == 0)
+    hours = local.hour + local.minute / 60.0
+    timing = np.where(hours < MARKET_OPEN_HOUR, "BMO", np.where(hours >= MARKET_CLOSE_HOUR, "AMC", "unknown"))
+    frame = pd.DataFrame(
+        {
+            "earnings_date": np.where(date_only, utc.strftime("%Y-%m-%d"), local.strftime("%Y-%m-%d")),
+            "timing": np.where(date_only, "unknown", timing),
+            "announce_time": pd.Series(
+                [
+                    None if unknown else text
+                    for text, unknown in zip(local.strftime("%H:%M"), date_only, strict=True)
+                ],
+                dtype=object,
+            ),
+            "eps_estimate": _numeric_column(raw, "EPS Estimate"),
+            "eps_actual": _numeric_column(raw, "Reported EPS"),
+            "surprise_pct": _numeric_column(raw, "Surprise(%)"),
+        }
+    )
+    frame = frame.sort_values("earnings_date").drop_duplicates(subset=["earnings_date"], keep="first")
+    return frame.reset_index(drop=True)[YAHOO_EARNINGS_COLUMNS]
+
+
+def _numeric_column(raw: pd.DataFrame, column: str) -> np.ndarray:
+    if column not in raw.columns:
+        return np.full(len(raw), np.nan)
+    return pd.to_numeric(raw[column], errors="coerce").to_numpy(dtype=float)
+
+
+def _yahoo_dtype(column: str) -> str:
+    return "float64" if column in {"eps_estimate", "eps_actual", "surprise_pct"} else "object"

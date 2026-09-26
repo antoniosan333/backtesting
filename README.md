@@ -34,14 +34,15 @@ Build a history of earnings reactions for every stock and ETF with weekly option
 
 ```bash
 lambdaclass universe fetch-weeklys                      # Cboe list → data/universe/weekly_options.parquet
-lambdaclass universe fetch-earnings --start 2024-01-01  # Nasdaq calendar, cached per day
-lambdaclass universe fetch-bars --start 2023-10-01      # daily bars for the equities
-lambdaclass universe build-events                       # one row per report + per-symbol stats
+lambdaclass universe fetch-yahoo-earnings               # up to 100 quarters per stock, with announcement time
+lambdaclass universe fetch-earnings --start 2024-01-01  # Nasdaq calendar per day: EPS, surprise, upcoming timing
+lambdaclass universe fetch-bars --start 2001-10-01      # daily bars for the equities
+lambdaclass universe build-events                       # merge sources → one row per report + per-symbol stats
 ```
 
-Results live in `data/earnings/events/weekly_options.parquet` (per event: gap, reaction and intraday returns, move in 20-day sigmas, volume ratio, 5-day run-up, 1/5/20-day drift, EPS surprise, `beat`) and `weekly_options_summary.parquet` (per symbol). Load them with `pd.read_parquet` or `DuckDBStore.read_earnings_events("weekly_options")`. Universe earnings dates are also written to `data/earnings/<SYMBOL>.parquet`, so `lambdaclass run --symbol <SYMBOL>` strategies see them in `StrategyContext`.
+Results live in `data/earnings/events/weekly_options.parquet` (per event: timing and its source, announcement time, gap, reaction and intraday returns, move in 20-day sigmas, volume ratio, 5-day run-up, 1/5/20-day drift, EPS surprise, `beat`) and `weekly_options_summary.parquet` (per symbol). Load them with `pd.read_parquet` or `DuckDBStore.read_earnings_events("weekly_options")`. The merged earnings dates are also written to `data/earnings/<SYMBOL>.parquet`, so `lambdaclass run --symbol <SYMBOL>` strategies see them in `StrategyContext`.
 
-Caveats: the Cboe list only shows current members (survivorship bias; each fetch is kept as a dated snapshot), and Nasdaq omits the time of day for past reports, so BMO/AMC is inferred from the larger overnight gap (`timing_source = inferred_gap`). Details: [ADR-0010](docs/decisions/0010-weekly-options-earnings-universe.md).
+BMO/AMC comes from Yahoo's announcement timestamps (then Nasdaq's upcoming-day timing). For the few reports with no known time it is inferred from the overnight gaps and a per-symbol vote; filter on `timing_source == "vendor"` when you need exact timing. The Cboe list only shows current members, so older events carry survivorship bias (each fetch is kept as a dated snapshot). Details: [ADR-0010](docs/decisions/0010-weekly-options-earnings-universe.md).
 
 Strategy files are executable Python. Only run strategies you trust; treat
 `strategies/` as application code rather than an untrusted data directory.

@@ -191,17 +191,22 @@ def test_symbol_earnings_frames_use_canonical_schema() -> None:
 
 def test_parse_yahoo_earnings_dates_maps_announcement_times() -> None:
     raw = _yahoo_raw(
-        ["2025-01-15 06:00", "2025-01-16 12:30", "2025-01-29 16:05", "2025-04-22 20:00", "2025-04-22 20:00"],
+        ["2025-01-15 06:00", "2025-03-12 12:30", "2025-01-29 16:05", "2025-04-22 20:00", "2025-04-22 20:00"],
         actuals=[1.0, 2.0, 3.0, 4.0, 5.0],
     )
     frame = parse_yahoo_earnings_dates(raw)
 
     assert list(frame.columns) == YAHOO_EARNINGS_COLUMNS
-    assert frame["earnings_date"].tolist() == ["2025-01-15", "2025-01-16", "2025-01-29", "2025-04-23"]
+    assert frame["earnings_date"].tolist() == ["2025-01-15", "2025-01-29", "2025-03-12", "2025-04-23"]
     # 20:00 New York in April is midnight UTC: Yahoo's "date known, time unknown" marker.
-    assert frame["timing"].tolist() == ["BMO", "unknown", "AMC", "unknown"]
-    assert frame["announce_time"].tolist() == ["06:00", "12:30", "16:05", None]
-    assert frame["eps_actual"].tolist() == [1.0, 2.0, 3.0, 4.0]
+    assert frame["timing"].tolist() == ["BMO", "AMC", "unknown", "unknown"]
+    assert frame["announce_time"].tolist() == ["06:00", "16:05", "12:30", None]
+    assert frame["eps_actual"].tolist() == [1.0, 3.0, 2.0, 4.0]
+    listed_twice = parse_yahoo_earnings_dates(
+        _yahoo_raw(["2007-06-04 20:00", "2007-06-05 17:00", "2007-08-20 16:00"])
+    )
+    assert listed_twice["earnings_date"].tolist() == ["2007-06-05", "2007-08-20"]
+    assert listed_twice["timing"].tolist() == ["AMC", "AMC"]
     assert parse_yahoo_earnings_dates(None).empty
     assert list(parse_yahoo_earnings_dates(None).columns) == YAHOO_EARNINGS_COLUMNS
 
@@ -209,12 +214,19 @@ def test_parse_yahoo_earnings_dates_maps_announcement_times() -> None:
 def test_combine_earnings_sources_prefers_yahoo_timing_and_nasdaq_eps() -> None:
     nasdaq = pd.DataFrame(
         {
-            "symbol": ["AAA", "AAA", "BBB", "CCC"],
-            "earnings_date": ["2025-01-29", "2025-04-23", "2025-02-05", "2025-03-03"],
-            "timing": ["unknown", "unknown", "BMO", "unknown"],
-            "eps_actual": [1.0, np.nan, 2.0, 3.0],
-            "eps_estimate": [0.9, 1.1, 1.9, 2.9],
-            "surprise_pct": [11.0, np.nan, 5.0, 3.0],
+            "symbol": ["AAA", "AAA", "AAA", "AAA", "BBB", "CCC"],
+            "earnings_date": [
+                "2024-07-24",
+                "2025-01-10",
+                "2025-01-29",
+                "2025-04-23",
+                "2025-02-05",
+                "2025-03-03",
+            ],
+            "timing": ["unknown", "BMO", "unknown", "unknown", "BMO", "unknown"],
+            "eps_actual": [0.5, 9.0, 1.0, np.nan, 2.0, 3.0],
+            "eps_estimate": [0.5, 9.0, 0.9, 1.1, 1.9, 2.9],
+            "surprise_pct": [0.0, 0.0, 11.0, np.nan, 5.0, 3.0],
         }
     )
     yahoo = pd.DataFrame(
@@ -230,7 +242,9 @@ def test_combine_earnings_sources_prefers_yahoo_timing_and_nasdaq_eps() -> None:
     )
     combined = combine_earnings_sources(nasdaq, yahoo).set_index(["symbol", "earnings_date"])
 
+    # 2025-01-10 sits inside Yahoo's AAA span without a Yahoo partner: another company on the ticker.
     assert list(combined.index) == [
+        ("AAA", "2024-07-24"),
         ("AAA", "2024-10-23"),
         ("AAA", "2025-01-29"),
         ("AAA", "2025-04-24"),
@@ -247,7 +261,8 @@ def test_combine_earnings_sources_prefers_yahoo_timing_and_nasdaq_eps() -> None:
     assert (bbb["timing"], bbb["timing_vendor"]) == ("BMO", "nasdaq")
     assert combined.loc[("CCC", "2025-03-03"), "source"] == "nasdaq"
     assert combine_earnings_sources(nasdaq.head(0), yahoo.head(0)).empty
-    assert len(combine_earnings_sources(nasdaq, yahoo.head(0))) == 4
+    assert combined.loc[("AAA", "2024-07-24"), "source"] == "nasdaq"  # before Yahoo's span: kept
+    assert len(combine_earnings_sources(nasdaq, yahoo.head(0))) == 6
 
 
 def test_write_earnings_replace_sources_keeps_other_sources(tmp_path: Path) -> None:

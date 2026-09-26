@@ -129,7 +129,30 @@ def combine_earnings_sources(
         nasdaq_value = pairs[f"n_{column}"].where(paired)
         combined[column] = nasdaq_value.where(nasdaq_value.notna(), pairs[column])
     unmatched = ~np.isin(np.arange(len(nasdaq_rows)), pairs.loc[paired, "n_row"].to_numpy())
-    return _finish_combined(pd.concat([combined, nasdaq_rows[unmatched]], ignore_index=True))
+    return _finish_combined(
+        pd.concat(
+            [combined, nasdaq_rows[unmatched & ~_inside_yahoo_span(nasdaq_rows, yahoo_rows, tolerance_days)]],
+            ignore_index=True,
+        )
+    )
+
+
+def _inside_yahoo_span(
+    nasdaq_rows: pd.DataFrame, yahoo_rows: pd.DataFrame, tolerance_days: int
+) -> np.ndarray:
+    """Nasdaq rows dated within the span Yahoo covers for the same symbol.
+
+    Yahoo's per-company history is complete inside its span, so an unpaired
+    Nasdaq row there is a duplicate or another company that used the ticker
+    before (e.g. ``B`` was Barnes Group before Barrick).
+    """
+    days = pd.to_datetime(yahoo_rows["earnings_date"])
+    span = days.groupby(yahoo_rows["symbol"]).agg(["min", "max"])
+    slack = pd.Timedelta(days=tolerance_days)
+    nasdaq_days = pd.to_datetime(nasdaq_rows["earnings_date"])
+    first = nasdaq_rows["symbol"].map(span["min"])
+    last = nasdaq_rows["symbol"].map(span["max"])
+    return ((nasdaq_days >= first - slack) & (nasdaq_days <= last + slack)).to_numpy()
 
 
 def _source_frame(frame: pd.DataFrame, source: str) -> pd.DataFrame:

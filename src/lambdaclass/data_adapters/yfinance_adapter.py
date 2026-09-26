@@ -18,6 +18,7 @@ YAHOO_EARNINGS_COLUMNS = [
 YAHOO_EARNINGS_LIMIT = 100
 MARKET_OPEN_HOUR = 9.5
 MARKET_CLOSE_HOUR = 16.0
+DUPLICATE_WINDOW_DAYS = 3
 _NEW_YORK = "America/New_York"
 
 
@@ -154,8 +155,26 @@ def parse_yahoo_earnings_dates(raw: pd.DataFrame | None) -> pd.DataFrame:
             "surprise_pct": _numeric_column(raw, "Surprise(%)"),
         }
     )
-    frame = frame.sort_values("earnings_date").drop_duplicates(subset=["earnings_date"], keep="first")
-    return frame.reset_index(drop=True)[YAHOO_EARNINGS_COLUMNS]
+    return _collapse_near_duplicates(frame)[YAHOO_EARNINGS_COLUMNS]
+
+
+def _collapse_near_duplicates(frame: pd.DataFrame) -> pd.DataFrame:
+    """Yahoo sometimes lists one report twice, days apart; keep one row per cluster.
+
+    Rows within ``DUPLICATE_WINDOW_DAYS`` of the previous row form a cluster; the
+    row with a known announcement time wins, else the earliest.
+    """
+    ordered = frame.assign(_known=frame["timing"].ne("unknown")).sort_values("earnings_date")
+    days = pd.to_datetime(ordered["earnings_date"])
+    cluster = (days.diff().dt.days.fillna(DUPLICATE_WINDOW_DAYS + 1) > DUPLICATE_WINDOW_DAYS).cumsum()
+    best = ordered.assign(_cluster=cluster.to_numpy()).sort_values(
+        ["_cluster", "_known", "earnings_date"], ascending=[True, False, True], kind="stable"
+    )
+    return (
+        best.drop_duplicates(subset=["_cluster"], keep="first")
+        .sort_values("earnings_date")
+        .reset_index(drop=True)
+    )
 
 
 def _numeric_column(raw: pd.DataFrame, column: str) -> np.ndarray:

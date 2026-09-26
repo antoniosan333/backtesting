@@ -40,3 +40,4 @@ Copy [0000-template.md](0000-template.md) and fill in sections.
 | [0005](0005-options-engine-accounting.md) | Options ledger, MTM, and expiry settlement in `run_backtest` |
 | [0006](0006-earnings-calendar.md) | Earnings calendar fetch, context fields, event metrics, Earnings tab |
 | [0007](0007-atomic-option-fills-and-risk-limits.md) | Atomic option structures, reduce-only closes, ledger context, and enforced risk limits |
+| [0008](0008-fill-timing-dividends-and-short-stock.md) | Fill timing (`same_close` / `next_open`), cash dividends, and short stock |

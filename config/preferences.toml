@@ -6,6 +6,7 @@ commission_per_contract = 0.65
 stock_commission_per_order = 0.0
 stock_commission_per_share = 0.0
 slippage_bps = 2
+fill_timing = "same_close"
 
 [paths]
 data_dir = "data"
@@ -19,6 +20,8 @@ save_html = true
 [risk]
 max_position_pct = 0.1
 max_open_positions = 5
+allow_short_stock = false
+short_borrow_rate = 0.0
 
 [optionsdx]
 input_dir = "zRawData/optionsdx"

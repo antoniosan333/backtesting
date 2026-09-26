@@ -351,6 +351,19 @@ def run_backtest(
                 }
             )
 
+        dividend = numeric_value(row.get("dividends"))
+        if dividend and position:
+            cash += position * dividend
+            trades.append(
+                {
+                    "date": date_key,
+                    "action": "dividend",
+                    "quantity": position,
+                    "price": dividend,
+                    "cash_after": cash,
+                }
+            )
+
         context = StrategyContext(
             row=row,
             cash=cash,

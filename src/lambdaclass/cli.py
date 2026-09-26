@@ -313,6 +313,13 @@ def run_strategy(
     bars = store.read_bars(symbol, start=start, end=end)
     if bars.empty:
         raise typer.BadParameter("No stock bars found. Run `lambdaclass fetch <SYMBOL>` first.")
+    if bars.attrs.get("dividends_backfilled"):
+        typer.secho(
+            f"Warning: {symbol} bars predate dividend capture; dividends are treated as zero. "
+            f"Re-run `lambdaclass fetch {symbol}` to include them.",
+            fg=typer.colors.YELLOW,
+            err=True,
+        )
     bars = bars.sort_values("date").reset_index(drop=True)
     chain_src = (options_source or prefs.defaults.options_chain_source).strip().lower()
     if chain_src not in ("yfinance", "optionsdx"):

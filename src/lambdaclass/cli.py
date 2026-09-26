@@ -4,7 +4,6 @@ import json
 import re
 import subprocess
 import sys
-import time
 from collections.abc import Callable
 from datetime import UTC, date, datetime
 from pathlib import Path
@@ -13,11 +12,19 @@ from typing import Any, TypeVar
 import pandas as pd
 import typer
 
-from lambdaclass.config import DEFAULT_PREFERENCES, Preferences, compute_config_hash
+from lambdaclass.cli_universe import universe_app
+from lambdaclass.config import (
+    DEFAULT_PREFERENCES,
+    Preferences,
+    compute_config_hash,
+    load_project_preferences,
+    preferences_path,
+)
 from lambdaclass.data_adapters.optionsdx_normalize import NormalizeOptions, run_normalize
 from lambdaclass.data_adapters.yfinance_adapter import YFinanceAdapter
 from lambdaclass.earnings.calendar import normalize_earnings_frame
 from lambdaclass.reporting import dashboard as reporting_dashboard
+from lambdaclass.retry import with_retry
 from lambdaclass.runs.layout import PARAM_PREFIX, SWEEPS_DIRNAME
 from lambdaclass.runs.runner import RunInputs, execute_run, load_run_inputs
 from lambdaclass.runs.sweep import (
@@ -78,14 +85,11 @@ def _warn_chain_coverage(options_chain: pd.DataFrame, bar_dates: pd.Series, sour
 
 
 def _preferences_path(root: Path) -> Path:
-    return root / "config" / "preferences.toml"
+    return preferences_path(root)
 
 
 def _load_preferences(root: Path) -> Preferences:
-    path = _preferences_path(root)
-    if not path.exists():
-        return DEFAULT_PREFERENCES
-    return Preferences.load(path)
+    return load_project_preferences(root)
 
 
 def _get_adapter(name: str) -> YFinanceAdapter:
@@ -210,18 +214,10 @@ def _fetch_with_retry(
     retries: int = 3,
     delay_seconds: float = 1.0,
 ) -> FetchResult:
-    last_error: Exception | None = None
-    for attempt in range(1, retries + 1):
-        try:
-            return fetch_fn()
-        except Exception as exc:  # pragma: no cover - defensive runtime handling
-            last_error = exc
-            if attempt == retries:
-                break
-            time.sleep(delay_seconds * attempt)
-    if last_error is not None:
-        raise typer.BadParameter(f"Data fetch failed after {retries} attempts: {last_error}") from last_error
-    raise typer.BadParameter("Data fetch failed for an unknown reason.")
+    try:
+        return with_retry(fetch_fn, retries=retries, delay_seconds=delay_seconds)
+    except Exception as exc:  # pragma: no cover - defensive runtime handling
+        raise typer.BadParameter(f"Data fetch failed after {retries} attempts: {exc}") from exc
 
 
 @app.command("init")
@@ -671,6 +667,9 @@ def dashboard_cmd(
             err=True,
         )
         raise typer.Exit(code=1) from exc
+
+
+app.add_typer(universe_app, name="universe")
 
 
 def main() -> None:

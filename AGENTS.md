@@ -11,13 +11,15 @@ Stock and options backtesting: Typer CLI, TOML preferences, local Parquet + Duck
 | Preferences | `config/preferences.toml` (created by `init`) |
 | Strategies (monthly) | `strategies/<YYYY-MM>/<name>.py` |
 | Fetched data | `data/stocks/`, `data/options/`, `data/earnings/` |
+| Weekly-options universe | `data/universe/weekly_options.parquet` (+ `snapshots/weekly_options/<date>.parquet`) |
+| Earnings calendar cache / events | `data/earnings/calendar/<YYYY>/<date>.parquet`, `data/earnings/events/weekly_options[_summary].parquet` |
 | OptionsDX normalized | `data/optionsdx/normalized/<SYMBOL>/<YYYY>/<MM>/` |
 | OptionsDX reports | `data/optionsdx/reports/files/`, `data/optionsdx/reports/runs/` |
 | Backtest runs | `runs/<YYYY-MM>/<strategy>/<run_id>/` |
 | Sweep summaries | `runs/<YYYY-MM>/<strategy>/_sweeps/<sweep_id>/` (`sweep.parquet`, `sweep.json`) |
 | App state JSON | `state/` (e.g. `fetch_markers.json`, `optionsdx_normalize_state.json`) |
 | Raw OptionsDX | `zRawData/optionsdx/*.txt` |
-| Tests | `tests/` (fixtures `tests/fixtures/optionsdx/`) |
+| Tests | `tests/` (fixtures `tests/fixtures/optionsdx/`, `tests/fixtures/cboe/`, `tests/fixtures/nasdaq/`) |
 
 Deeper package notes: [data_adapters](src/lambdaclass/data_adapters/AGENTS.md), [storage](src/lambdaclass/storage/AGENTS.md), [strategies](src/lambdaclass/strategies/AGENTS.md), [backtest](src/lambdaclass/backtest/AGENTS.md), [reporting](src/lambdaclass/reporting/AGENTS.md).
 
@@ -32,6 +34,10 @@ All via `lambdaclass` (Python ≥ 3.11, `pip install -e ".[dev]"`).
 | `init` | Create dirs + default `config/preferences.toml` (`--force` overwrites prefs) |
 | `fetch SYMBOL --start YYYY-MM-DD [--end]` | yfinance → Parquet append + dedupe; updates `state/fetch_markers.json` |
 | `fetch-earnings SYMBOL [--csv PATH]` | Earnings calendar → `data/earnings/<SYMBOL>.parquet` (yfinance or CSV); `state/earnings_fetch_markers.json` |
+| `universe fetch-weeklys [--csv]` / `universe show` | Cboe weekly-options list (equity + ETP) → universe Parquet + dated snapshot |
+| `universe fetch-earnings --start [--end] [--refresh-days]` | Nasdaq earnings calendar per day (cached) → per-symbol `data/earnings/<SYMBOL>.parquet` for universe names |
+| `universe fetch-bars --start [--end] [--category]` | yfinance bars for every universe symbol (skips covered windows) |
+| `universe build-events [--category] [--min-events]` | Earnings reaction events + per-symbol summary; infers BMO/AMC from gaps ([ADR-0010](docs/decisions/0010-weekly-options-earnings-universe.md)) |
 | `new-strategy NAME` | Scaffold under current month folder |
 | `run STRATEGY [--symbol] [--start/--end] [--options-source …] [--param key=value …] [--fail-on-rejected-orders]` | Backtest; `--options-source yfinance` or `optionsdx` (default: `[defaults].options_chain_source`); `--param` overrides `StrategyImpl.params` |
 | `sweep STRATEGY --grid key=a,b [--grid key=start:stop:step] [--param …] [--metric] [--jobs N] [--max-combos]` | Run every grid combination as a normal run + write a sweep summary ([ADR-0009](docs/decisions/0009-parameter-sweeps.md)) |
@@ -69,6 +75,7 @@ All via `lambdaclass` (Python ≥ 3.11, `pip install -e ".[dev]"`).
 | BSM / Greeks / mid quotes | `src/lambdaclass/options/pricing.py` |
 | Option presets / payoff curves | `src/lambdaclass/options/presets.py`, `src/lambdaclass/options/payoff.py` |
 | Earnings calendar helpers | `src/lambdaclass/earnings/calendar.py` (`EarningsCalendar`) |
+| Earnings universe / reaction events | `src/lambdaclass/cli_universe.py`, `src/lambdaclass/earnings/history.py`, `src/lambdaclass/earnings/events.py` |
 | Metrics / HTML report / dashboard | `src/lambdaclass/reporting/` (`reporting/dashboard/` for Streamlit) |
 
 ## Auto-appended by continual-learning

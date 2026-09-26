@@ -42,3 +42,4 @@ Copy [0000-template.md](0000-template.md) and fill in sections.
 | [0007](0007-atomic-option-fills-and-risk-limits.md) | Atomic option structures, reduce-only closes, ledger context, and enforced risk limits |
 | [0008](0008-fill-timing-dividends-and-short-stock.md) | Fill timing (`same_close` / `next_open`), cash dividends, and short stock |
 | [0009](0009-parameter-sweeps.md) | `run --param` overrides, `lambdaclass.runs` orchestration, and `sweep` |
+| [0010](0010-weekly-options-earnings-universe.md) | Weekly-options universe, Nasdaq earnings history, and earnings reaction events |

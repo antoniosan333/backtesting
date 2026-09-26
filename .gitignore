@@ -5,9 +5,9 @@
 state/*.json
 
 # Local data and outputs (large / machine-specific)
-data/
-runs/
-zRawData/
+/data/
+/runs/
+/zRawData/
 
 # Python
 __pycache__/

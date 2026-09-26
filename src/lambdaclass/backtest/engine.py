@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
@@ -72,13 +73,17 @@ def _chain_row_for_contract(chain: pd.DataFrame | None, contract_symbol: str) ->
     return matches.iloc[0]
 
 
-def _prepare_chain_by_date(options_chain: pd.DataFrame) -> dict[str, pd.DataFrame]:
+def prepare_chain_by_date(options_chain: pd.DataFrame) -> dict[str, pd.DataFrame]:
+    """Split a chain into per-``asof`` frames indexed by ``contract_symbol``.
+
+    Building this is the dominant cost of a run on large chains; callers that run
+    many backtests over the same chain should build it once and pass it to
+    ``run_backtest(chain_by_date=...)``. Strategies must not mutate these frames.
+    """
     if options_chain.empty:
         return {}
-    return {
-        str(key): frame.reset_index(drop=True).set_index("contract_symbol", drop=False)
-        for key, frame in options_chain.groupby("asof")
-    }
+    indexed = options_chain.set_index("contract_symbol", drop=False)
+    return {str(key): frame for key, frame in indexed.groupby("asof", sort=False)}
 
 
 @dataclass
@@ -389,9 +394,17 @@ def run_backtest(
     options_chain: pd.DataFrame,
     preferences: Preferences,
     earnings: pd.DataFrame | None = None,
+    *,
+    chain_by_date: Mapping[str, pd.DataFrame] | None = None,
 ) -> RunResult:
+    """Run ``strategy`` over ``bars``.
+
+    ``chain_by_date`` (from ``prepare_chain_by_date``) takes precedence over
+    ``options_chain`` so repeated runs can share one index.
+    """
     bars_sorted = bars.sort_values("date").reset_index(drop=True)
-    chain_by_date = _prepare_chain_by_date(options_chain)
+    if chain_by_date is None:
+        chain_by_date = prepare_chain_by_date(options_chain)
     earnings_df = earnings if earnings is not None else pd.DataFrame()
     cash = float(preferences.defaults.starting_capital)
     position = 0

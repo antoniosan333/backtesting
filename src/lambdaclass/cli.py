@@ -14,29 +14,16 @@ from typing import TypeVar
 import pandas as pd
 import typer
 
-from lambdaclass.backtest.engine import run_backtest, write_run_outputs
-from lambdaclass.config import (
-    DEFAULT_PREFERENCES,
-    Preferences,
-    build_snapshot_payload,
-    compute_config_hash,
-    snapshot_preferences,
-)
-from lambdaclass.data_adapters.optionsdx_chain_loader import load_normalized_optionsdx_chain
+from lambdaclass.config import DEFAULT_PREFERENCES, Preferences
 from lambdaclass.data_adapters.optionsdx_normalize import NormalizeOptions, run_normalize
 from lambdaclass.data_adapters.yfinance_adapter import YFinanceAdapter
 from lambdaclass.earnings.calendar import normalize_earnings_frame
 from lambdaclass.reporting import dashboard as reporting_dashboard
-from lambdaclass.reporting.earnings_metrics import (
-    average_iv_from_option_trades,
-    compute_earnings_events,
-    summarize_earnings_events,
-)
-from lambdaclass.reporting.metrics import compute_metrics
-from lambdaclass.reporting.tearsheet import write_tearsheet
+from lambdaclass.runs.runner import RunInputs, execute_run, load_run_inputs
 from lambdaclass.state import load_json, save_json
 from lambdaclass.storage.duckdb_store import DuckDBStore
 from lambdaclass.strategies.base import Strategy
+from lambdaclass.strategies.params import ParamError, apply_params, parse_assignments
 from lambdaclass.strategies.scaffolder import scaffold_strategy
 from lambdaclass.symbols import validate_symbol
 
@@ -129,22 +116,6 @@ def _validate_symbol(symbol: str) -> str:
         raise typer.BadParameter(str(exc), param_hint="symbol") from exc
 
 
-def _load_strategy(path: Path) -> Strategy:
-    module_name = f"strategy_{path.stem}"
-    spec = importlib.util.spec_from_file_location(module_name, path)
-    if spec is None or spec.loader is None:
-        raise typer.BadParameter(f"Could not load strategy module from {path}")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    strategy_cls = getattr(module, "StrategyImpl", None)
-    if strategy_cls is None:
-        raise typer.BadParameter("Strategy file must define StrategyImpl class")
-    strategy = strategy_cls()
-    if not isinstance(strategy, Strategy):
-        raise typer.BadParameter("StrategyImpl must inherit lambdaclass.strategies.base.Strategy")
-    return strategy
-
-
 def _find_strategy_file(strategies_dir: Path, strategy_name: str) -> Path:
     matches = sorted(strategies_dir.glob(f"*/{strategy_name}.py"))
     if not matches:
@@ -154,6 +125,81 @@ def _find_strategy_file(strategies_dir: Path, strategy_name: str) -> Path:
     if root not in resolved.parents:
         raise typer.BadParameter("Strategy path escapes strategies directory.")
     return resolved
+
+
+def _load_strategy_class(path: Path) -> type[Strategy]:
+    module_name = f"strategy_{path.stem}"
+    spec = importlib.util.spec_from_file_location(module_name, path)
+    if spec is None or spec.loader is None:
+        raise typer.BadParameter(f"Could not load strategy module from {path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    strategy_cls = getattr(module, "StrategyImpl", None)
+    if strategy_cls is None:
+        raise typer.BadParameter("Strategy file must define StrategyImpl class")
+    if not isinstance(strategy_cls, type) or not issubclass(strategy_cls, Strategy):
+        raise typer.BadParameter("StrategyImpl must inherit lambdaclass.strategies.base.Strategy")
+    return strategy_cls
+
+
+def _instantiate_strategy(strategy_cls: type[Strategy]) -> Strategy:
+    strategy = strategy_cls()
+    if not isinstance(strategy, Strategy):
+        raise typer.BadParameter("StrategyImpl must inherit lambdaclass.strategies.base.Strategy")
+    return strategy
+
+
+def _load_strategy(path: Path) -> Strategy:
+    return _instantiate_strategy(_load_strategy_class(path))
+
+
+def _resolve_strategy_class(root: Path, prefs: Preferences, strategy_name: str) -> type[Strategy]:
+    strategies_dir = root / prefs.paths.strategies_dir
+    validated_strategy = _validate_strategy_name(strategy_name)
+    return _load_strategy_class(_find_strategy_file(strategies_dir, validated_strategy))
+
+
+def _load_inputs(
+    root: Path,
+    prefs: Preferences,
+    *,
+    symbol: str,
+    start: str | None,
+    end: str | None,
+    options_source: str | None,
+) -> RunInputs:
+    optionsdx_root = Path(prefs.optionsdx.output_dir)
+    if not optionsdx_root.is_absolute():
+        optionsdx_root = (root / optionsdx_root).resolve()
+    try:
+        inputs = load_run_inputs(
+            DuckDBStore(root / prefs.paths.data_dir),
+            symbol=symbol,
+            start=start,
+            end=end,
+            options_source=options_source or prefs.defaults.options_chain_source,
+            optionsdx_root=optionsdx_root,
+        )
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    if inputs.dividends_backfilled:
+        typer.secho(
+            f"Warning: {symbol} bars predate dividend capture; dividends are treated as zero. "
+            f"Re-run `lambdaclass fetch {symbol}` to include them.",
+            fg=typer.colors.YELLOW,
+            err=True,
+        )
+    _warn_chain_coverage(inputs.options_chain, inputs.bars["date"], inputs.options_source)
+    return inputs
+
+
+def _run_overrides(inputs: RunInputs, *, start: str | None, end: str | None) -> dict[str, str | None]:
+    return {
+        "start": start,
+        "end": end,
+        "symbol": inputs.symbol,
+        "options_source": inputs.options_source,
+    }
 
 
 def _fetch_with_retry(
@@ -301,97 +347,39 @@ def run_strategy(
         False,
         help="Exit non-zero if any stock or option order was rejected",
     ),
+    param: list[str] | None = typer.Option(
+        None,
+        "--param",
+        help="Override a strategy param as key=value (repeatable); typed from the strategy's default",
+    ),
 ) -> None:
     root = _repo_root()
     symbol = _validate_symbol(symbol)
     prefs = _load_preferences(root)
-    strategies_dir = root / prefs.paths.strategies_dir
-    validated_strategy = _validate_strategy_name(strategy_name)
-    strategy_path = _find_strategy_file(strategies_dir, validated_strategy)
-    strategy = _load_strategy(strategy_path)
-    store = DuckDBStore(root / prefs.paths.data_dir)
-    bars = store.read_bars(symbol, start=start, end=end)
-    if bars.empty:
-        raise typer.BadParameter("No stock bars found. Run `lambdaclass fetch <SYMBOL>` first.")
-    if bars.attrs.get("dividends_backfilled"):
-        typer.secho(
-            f"Warning: {symbol} bars predate dividend capture; dividends are treated as zero. "
-            f"Re-run `lambdaclass fetch {symbol}` to include them.",
-            fg=typer.colors.YELLOW,
-            err=True,
-        )
-    bars = bars.sort_values("date").reset_index(drop=True)
-    chain_src = (options_source or prefs.defaults.options_chain_source).strip().lower()
-    if chain_src not in ("yfinance", "optionsdx"):
-        raise typer.BadParameter("options_source must be yfinance or optionsdx")
-    if chain_src == "optionsdx":
-        ox_root = Path(prefs.optionsdx.output_dir)
-        if not ox_root.is_absolute():
-            ox_root = (root / ox_root).resolve()
-        options_chain = load_normalized_optionsdx_chain(ox_root, symbol, bars["date"])
-    else:
-        options_chain = store.read_chain(symbol)
-    _warn_chain_coverage(options_chain, bars["date"], chain_src)
-    # Earnings calendar (full history so days_to/since work at window edges)
-    earnings = store.read_earnings(symbol)
+    strategy_cls = _resolve_strategy_class(root, prefs, strategy_name)
+    strategy = _instantiate_strategy(strategy_cls)
+    try:
+        apply_params(strategy, parse_assignments(param or []))
+    except ParamError as exc:
+        raise typer.BadParameter(str(exc), param_hint="--param") from exc
+    inputs = _load_inputs(root, prefs, symbol=symbol, start=start, end=end, options_source=options_source)
     month = datetime.now(tz=UTC).strftime("%Y-%m")
-    cli_overrides = {
-        "start": start,
-        "end": end,
-        "symbol": symbol,
-        "options_source": chain_src,
-    }
-    snapshot_payload = build_snapshot_payload(prefs, strategy.params, cli_overrides)
-    cfg_hash = compute_config_hash(snapshot_payload)
-    run_id = _run_id(cfg_hash, root)
-    run_dir = root / prefs.paths.runs_dir / month / strategy.name / run_id
-    run_result = run_backtest(strategy, bars, options_chain, prefs, earnings=earnings)
-    trades_path, equity_path = write_run_outputs(run_result, run_dir)
-    metrics = compute_metrics(
-        run_result.equity_curve,
-        risk_free_rate=prefs.defaults.risk_free_rate,
+    strategy_runs = root / prefs.paths.runs_dir / month / strategy.name
+    summary = execute_run(
+        strategy,
+        inputs,
+        prefs,
+        cli_overrides=_run_overrides(inputs, start=start, end=end),
+        run_dir_for=lambda config_hash: strategy_runs / _run_id(config_hash, root),
     )
-    events = compute_earnings_events(
-        option_trades=run_result.option_trades,
-        earnings=earnings,
-        bars=bars,
-        iv_by_date=average_iv_from_option_trades(run_result.option_trades),
-    )
-    if not events.empty:
-        events.to_parquet(run_dir / "events.parquet", index=False)
-        metrics.update(summarize_earnings_events(events))
-    metrics_path = run_dir / "metrics.json"
-    metrics_path.write_text(json.dumps(metrics, indent=2, sort_keys=True), encoding="utf-8")
-    snapshot_path = run_dir / "config.snapshot.toml"
-    snapshot_preferences(
-        preferences=prefs,
-        strategy_params=strategy.params,
-        cli_overrides=cli_overrides,
-        output_path=snapshot_path,
-    )
-    log_path = run_dir / "run.log"
-    log_path.write_text(
-        (
-            f"strategy={strategy.name}\n"
-            f"symbol={symbol}\n"
-            f"rows={len(bars)}\n"
-            f"trades={len(run_result.trades)}\n"
-            f"option_trades={len(run_result.option_trades)}\n"
-            f"rejected_orders={len(run_result.rejected_orders)}\n"
-            f"earnings_events={len(events)}\n"
-            f"config_hash={cfg_hash}\n"
-        ),
-        encoding="utf-8",
-    )
-    if prefs.reporting.save_html:
-        write_tearsheet(run_result.equity_curve, run_dir / "report.html", theme=prefs.reporting.plot_theme)
+    run_dir = summary.run_dir
     typer.echo(f"Run complete: {run_dir}")
-    typer.echo(f"Metrics: {metrics_path}")
-    typer.echo(f"Trades: {trades_path}")
-    typer.echo(f"Equity: {equity_path}")
-    if not events.empty:
+    typer.echo(f"Metrics: {run_dir / 'metrics.json'}")
+    typer.echo(f"Trades: {run_dir / 'trades.csv'}")
+    typer.echo(f"Equity: {run_dir / 'equity.parquet'}")
+    if not summary.events.empty:
         typer.echo(f"Events: {run_dir / 'events.parquet'}")
-    rejected = run_result.rejected_orders
+    rejected = summary.result.rejected_orders
     if not rejected.empty:
         by_reason = ", ".join(
             f"{reason}={count}" for reason, count in rejected["reason"].value_counts().items()

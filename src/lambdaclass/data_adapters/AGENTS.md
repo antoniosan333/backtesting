@@ -6,6 +6,8 @@
 
 Implemented: `yfinance_adapter.py` (`yfinance`). CLI resolves adapter name from `preferences.defaults.data_adapter`.
 
+Also: `get_earnings_dates(symbol, limit=…)` → raw `earnings_date` / `timing` frame (empty if unavailable). Normalize via `lambdaclass.earnings.calendar.normalize_earnings_frame` before `DuckDBStore.write_earnings`. CLI: `fetch-earnings`.
+
 ## OptionsDX pipeline
 
 Order: **parse** (`optionsdx_parser.py`) → **quality** (`optionsdx_quality.py`) → **normalize** (`optionsdx_normalize.py`, `run_normalize`).

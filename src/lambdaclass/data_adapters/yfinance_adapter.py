@@ -87,3 +87,43 @@ class YFinanceAdapter:
                 "asof",
             ]
         ]
+
+    def get_earnings_dates(self, symbol: str, limit: int = 40) -> pd.DataFrame:
+        """Return raw earnings dates; empty frame when unavailable.
+
+        Columns: ``earnings_date``, ``timing`` (vendor string; normalize via
+        ``lambdaclass.earnings.calendar.normalize_earnings_frame``).
+        """
+        ticker = yf.Ticker(symbol)
+        raw: pd.DataFrame | None = None
+        try:
+            if hasattr(ticker, "get_earnings_dates"):
+                raw = ticker.get_earnings_dates(limit=limit)
+            elif hasattr(ticker, "earnings_dates") and ticker.earnings_dates is not None:
+                raw = ticker.earnings_dates
+        except Exception:
+            return pd.DataFrame(columns=["earnings_date", "timing"])
+        if raw is None or raw.empty:
+            return pd.DataFrame(columns=["earnings_date", "timing"])
+        frame = raw.reset_index()
+        # Index is often the earnings datetime
+        date_col = None
+        for candidate in ("Earnings Date", "earnings_date", "Date", "index", frame.columns[0]):
+            if candidate in frame.columns:
+                date_col = candidate
+                break
+        if date_col is None:
+            return pd.DataFrame(columns=["earnings_date", "timing"])
+        timing_col = None
+        for candidate in ("Event Type", "Earnings Timing", "timing", "Time"):
+            if candidate in frame.columns:
+                timing_col = candidate
+                break
+        out = pd.DataFrame(
+            {
+                "earnings_date": pd.to_datetime(frame[date_col], errors="coerce").dt.strftime("%Y-%m-%d"),
+                "timing": frame[timing_col] if timing_col else "unknown",
+            }
+        )
+        out = out.dropna(subset=["earnings_date"])
+        return out.reset_index(drop=True)

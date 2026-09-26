@@ -4,7 +4,9 @@
 
 `Strategy` (`base.py`): `name`, `params`, `on_bar(context: StrategyContext) -> StrategyDecision`.
 
-`StrategyContext`: bar row, `cash`, `position`, optional `options_chain` for that bar date.
+`StrategyContext`: bar row, `cash`, `position`, optional `options_chain` for that bar date, plus earnings fields when a calendar was passed to `run_backtest`: `days_to_next_earnings`, `days_since_last_earnings`, `next_earnings_date`, `earnings_timing` (`BMO`/`AMC`/`unknown`). All earnings fields are `None` when no calendar.
+
+Sample earnings strategies: `strategies/*/earnings_long_straddle.py`, `earnings_short_iron_condor.py` — enter on `days_to_next_earnings == N`, exit on `days_since_last_earnings >= M`.
 
 ## Scaffolding
 

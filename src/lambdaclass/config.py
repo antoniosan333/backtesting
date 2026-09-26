@@ -79,8 +79,11 @@ class DefaultsConfig(BaseModel):
         ),
     )
     starting_capital: float = 100_000
-    commission_per_contract: float = 0.65
+    commission_per_contract: float = Field(default=0.65, ge=0.0, description="Options only, per contract")
+    stock_commission_per_order: float = Field(default=0.0, ge=0.0)
+    stock_commission_per_share: float = Field(default=0.0, ge=0.0)
     slippage_bps: float = 2.0
+    risk_free_rate: float = 0.04
     timezone: str = "America/New_York"
 
 

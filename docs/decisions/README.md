@@ -35,3 +35,7 @@ Copy [0000-template.md](0000-template.md) and fill in sections.
 |-----|--------|
 | [0001](0001-local-duckdb-parquet.md) | Local DuckDB + Parquet for market data |
 | [0002](0002-options-chain-source.md) | Options chain source for backtests (`yfinance` vs `optionsdx`) |
+| [0003](0003-backtest-review-ui.md) | Backtest review UI (Streamlit dashboard, read-only, local-first) |
+| [0004](0004-options-strategy-builder.md) | Options strategy lab (chain-only legs, BSM + Greeks, Strategy tab) |
+| [0005](0005-options-engine-accounting.md) | Options ledger, MTM, and expiry settlement in `run_backtest` |
+| [0006](0006-earnings-calendar.md) | Earnings calendar fetch, context fields, event metrics, Earnings tab |

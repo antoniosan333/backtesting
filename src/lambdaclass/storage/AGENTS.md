@@ -8,12 +8,15 @@ Root: `Preferences.paths.data_dir` (default `data/`).
 |--------|----------------|------------|
 | `write_bars` / `read_bars` | `data/stocks/<SYMBOL>.parquet` | `(symbol, date)` — `keep="last"` |
 | `write_chain` / `read_chain` | `data/options/<SYMBOL>.parquet` | `(symbol, contract_symbol, asof)` — `keep="last"` |
+| `write_earnings` / `read_earnings` | `data/earnings/<SYMBOL>.parquet` | `(symbol, earnings_date)` — `keep="last"` |
 
-On append: read existing if present, `concat`, `drop_duplicates`, sort (`date` for bars; `asof`, `contract_symbol` for options), write.
+Earnings columns: `symbol`, `earnings_date`, `timing` (`BMO`\|`AMC`\|`unknown`), `source`, `fetched_at`. See [ADR-0006](../../../docs/decisions/0006-earnings-calendar.md).
 
-Reads use ephemeral `duckdb.connect()` + `read_parquet(?)` with optional `WHERE` on `date` or `asof`.
+On append: read existing if present, `concat`, `drop_duplicates`, sort, write.
 
-Dirs created in ctor: `stocks/`, `options/`, `cache/`.
+Reads use ephemeral `duckdb.connect()` + `read_parquet(?)` with optional `WHERE` on `date` / `asof` / `earnings_date`.
+
+Dirs created in ctor: `stocks/`, `options/`, `earnings/`, `cache/`.
 
 OptionsDX **normalized** Parquet layout is **not** under this class — it lives under `data/optionsdx/normalized/...` (see `data_adapters/optionsdx_normalize.py` and root AGENTS).
 

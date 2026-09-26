@@ -4,11 +4,13 @@ import importlib.util
 import json
 import re
 import subprocess
+import sys
 import time
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Callable
 
+import pandas as pd
 import typer
 
 from lambdaclass.backtest.engine import run_backtest, write_run_outputs
@@ -22,7 +24,14 @@ from lambdaclass.config import (
 from lambdaclass.data_adapters.optionsdx_chain_loader import load_normalized_optionsdx_chain
 from lambdaclass.data_adapters.optionsdx_normalize import NormalizeOptions, run_normalize
 from lambdaclass.data_adapters.yfinance_adapter import YFinanceAdapter
+from lambdaclass.earnings.calendar import normalize_earnings_frame
+from lambdaclass.reporting.earnings_metrics import (
+    average_iv_from_option_trades,
+    compute_earnings_events,
+    summarize_earnings_events,
+)
 from lambdaclass.reporting.metrics import compute_metrics
+from lambdaclass.reporting import dashboard as reporting_dashboard
 from lambdaclass.reporting.tearsheet import write_tearsheet
 from lambdaclass.state import load_json, save_json
 from lambdaclass.storage.duckdb_store import DuckDBStore
@@ -35,6 +44,37 @@ STRATEGY_NAME_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9_]*$")
 
 def _repo_root() -> Path:
     return Path.cwd()
+
+
+def _warn_chain_coverage(options_chain: pd.DataFrame, bar_dates: pd.Series, source: str) -> None:
+    """Warn when the loaded chain cannot serve the backtest window.
+
+    A `yfinance` chain is a single snapshot stamped with the fetch date, so it
+    typically overlaps at most one bar; the engine would then reject every
+    option order rather than fill it.
+    """
+    if options_chain.empty:
+        typer.secho(
+            f"Warning: no options chain rows loaded from '{source}'. "
+            "Any option orders will be rejected.",
+            fg=typer.colors.YELLOW,
+            err=True,
+        )
+        return
+    covered = set(options_chain["asof"].astype(str)) & set(bar_dates.astype(str))
+    if not covered:
+        typer.secho(
+            f"Warning: the '{source}' chain has no as-of date matching any bar in this window "
+            f"({len(options_chain)} rows loaded). Any option orders will be rejected.",
+            fg=typer.colors.YELLOW,
+            err=True,
+        )
+    elif len(covered) < len(bar_dates):
+        typer.secho(
+            f"Warning: options chain covers {len(covered)} of {len(bar_dates)} bars.",
+            fg=typer.colors.YELLOW,
+            err=True,
+        )
 
 
 def _preferences_path(root: Path) -> Path:
@@ -134,6 +174,7 @@ def init_project(force: bool = typer.Option(False, help="Overwrite existing pref
         root / "config",
         data_dir / "stocks",
         data_dir / "options",
+        data_dir / "earnings",
         data_dir / "cache",
         strategies_dir,
         runs_dir,
@@ -180,6 +221,41 @@ def fetch_data(
     )
 
 
+@app.command("fetch-earnings")
+def fetch_earnings(
+    symbol: str,
+    csv: str | None = typer.Option(None, help="Optional CSV with earnings_date [, timing] columns"),
+    force: bool = typer.Option(False, help="Overwrite existing rows for matching dates (via dedupe keep last)"),
+) -> None:
+    """Fetch or import earnings calendar into data/earnings/<SYMBOL>.parquet."""
+    _ = force  # dedupe keep-last always overwrites matching dates
+    root = _repo_root()
+    prefs = _load_preferences(root)
+    store = DuckDBStore(root / prefs.paths.data_dir)
+    symbol = symbol.upper()
+    if csv:
+        path = Path(csv)
+        if not path.is_file():
+            raise typer.BadParameter(f"CSV not found: {path}")
+        raw = pd.read_csv(path)
+        frame = normalize_earnings_frame(raw, symbol=symbol, source="csv")
+    else:
+        adapter = _get_adapter(prefs.defaults.data_adapter)
+        raw = _fetch_with_retry(lambda: adapter.get_earnings_dates(symbol))
+        frame = normalize_earnings_frame(raw, symbol=symbol, source="yfinance")
+    out_path = store.write_earnings(symbol, frame)
+    markers_path = root / "state" / "earnings_fetch_markers.json"
+    markers = load_json(markers_path)
+    markers[symbol] = {
+        "rows": int(len(frame)),
+        "path": str(out_path),
+        "source": "csv" if csv else "yfinance",
+        "updated_at": datetime.now(tz=timezone.utc).isoformat(),
+    }
+    save_json(markers_path, markers)
+    typer.echo(f"Earnings calendar {symbol}: {len(frame)} rows → {out_path}")
+
+
 @app.command("new-strategy")
 def new_strategy(name: str) -> None:
     root = _repo_root()
@@ -198,6 +274,10 @@ def run_strategy(
     options_source: str | None = typer.Option(
         None,
         help="Options chain: yfinance (data/options Parquet) or optionsdx (normalized under [optionsdx].output_dir). Default: [defaults].options_chain_source",
+    ),
+    fail_on_rejected_orders: bool = typer.Option(
+        False,
+        help="Exit non-zero if any option order could not be priced from the chain",
     ),
 ) -> None:
     root = _repo_root()
@@ -222,6 +302,9 @@ def run_strategy(
         options_chain = load_normalized_optionsdx_chain(ox_root, symbol, bars["date"])
     else:
         options_chain = store.read_chain(symbol)
+    _warn_chain_coverage(options_chain, bars["date"], chain_src)
+    # Earnings calendar (full history so days_to/since work at window edges)
+    earnings = store.read_earnings(symbol)
     now = datetime.now()
     month = ensure_month_dir(root / prefs.paths.strategies_dir, now=now).name
     cli_overrides = {"start": start, "end": end}
@@ -229,9 +312,18 @@ def run_strategy(
     cfg_hash = compute_config_hash(snapshot_payload)
     run_id = _run_id(cfg_hash, root)
     run_dir = root / prefs.paths.runs_dir / month / strategy.name / run_id
-    run_result = run_backtest(strategy, bars, options_chain, prefs)
+    run_result = run_backtest(strategy, bars, options_chain, prefs, earnings=earnings)
     trades_path, equity_path = write_run_outputs(run_result, run_dir)
     metrics = compute_metrics(run_result.equity_curve)
+    events = compute_earnings_events(
+        option_trades=run_result.option_trades,
+        earnings=earnings,
+        bars=bars,
+        iv_by_date=average_iv_from_option_trades(run_result.option_trades),
+    )
+    if not events.empty:
+        events.to_parquet(run_dir / "events.parquet", index=False)
+        metrics.update(summarize_earnings_events(events))
     metrics_path = run_dir / "metrics.json"
     metrics_path.write_text(json.dumps(metrics, indent=2, sort_keys=True), encoding="utf-8")
     snapshot_path = run_dir / "config.snapshot.toml"
@@ -248,6 +340,9 @@ def run_strategy(
             f"symbol={symbol}\n"
             f"rows={len(bars)}\n"
             f"trades={len(run_result.trades)}\n"
+            f"option_trades={len(run_result.option_trades)}\n"
+            f"rejected_orders={len(run_result.rejected_orders)}\n"
+            f"earnings_events={len(events)}\n"
             f"config_hash={cfg_hash}\n"
         ),
         encoding="utf-8",
@@ -258,6 +353,19 @@ def run_strategy(
     typer.echo(f"Metrics: {metrics_path}")
     typer.echo(f"Trades: {trades_path}")
     typer.echo(f"Equity: {equity_path}")
+    if not events.empty:
+        typer.echo(f"Events: {run_dir / 'events.parquet'}")
+    rejected = run_result.rejected_orders
+    if not rejected.empty:
+        by_reason = ", ".join(f"{reason}={count}" for reason, count in rejected["reason"].value_counts().items())
+        typer.secho(
+            f"Warning: {len(rejected)} option order(s) rejected ({by_reason}). "
+            f"See {run_dir / 'rejected_orders.csv'}",
+            fg=typer.colors.YELLOW,
+            err=True,
+        )
+        if fail_on_rejected_orders:
+            raise typer.Exit(code=1)
 
 
 @app.command("list-runs")
@@ -351,6 +459,45 @@ def normalize_optionsdx(
         raise typer.Exit(code=1)
     if fail_on_gates and summary["gate_failures"]:
         raise typer.Exit(code=1)
+
+
+@app.command("dashboard")
+def dashboard_cmd(
+    host: str = typer.Option("127.0.0.1", help="Bind address"),
+    port: int = typer.Option(8501, help="Streamlit port"),
+    headless: bool = typer.Option(
+        True,
+        "--headless/--no-headless",
+        help="Headless server (use --no-headless to auto-open a browser tab)",
+    ),
+) -> None:
+    """Launch the read-only Streamlit run review dashboard."""
+    app_path = Path(reporting_dashboard.__path__[0]) / "app.py"
+    app_path = app_path.resolve()
+    if not app_path.is_file():
+        typer.echo(f"Dashboard entry missing at {app_path}", err=True)
+        raise typer.Exit(code=1)
+    cmd = [
+        sys.executable,
+        "-m",
+        "streamlit",
+        "run",
+        str(app_path),
+        "--server.address",
+        host,
+        "--server.port",
+        str(port),
+        "--server.headless",
+        "true" if headless else "false",
+    ]
+    try:
+        subprocess.run(cmd, check=False)
+    except FileNotFoundError as exc:
+        typer.echo(
+            "Streamlit is not on PATH. Install the package dependencies (e.g. `pip install -e .`).",
+            err=True,
+        )
+        raise typer.Exit(code=1) from exc
 
 
 def main() -> None:

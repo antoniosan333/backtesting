@@ -10,7 +10,7 @@ Backtesting-first project for stock and options strategies with:
 ## Project memory
 
 - **[AGENTS.md](AGENTS.md)** — repo map, CLI summary, conventions, links to package-level notes. The Cursor continual-learning hook may append durable facts below the marker at the bottom of that file.
-- **[docs/decisions/](docs/decisions/README.md)** — ADRs for significant choices (template + `0001` seeded).
+- **[docs/decisions/](docs/decisions/README.md)** — ADRs for significant choices (template + `0001` storage, `0002` options chain source, `0003` dashboard).
 
 ## Quick start
 
@@ -23,6 +23,16 @@ lambdaclass run demo
 ```
 
 Options chain source (for strategies that use `context.options_chain`): set `[defaults] options_chain_source = "optionsdx"` after running `normalize-optionsdx`, or pass `lambdaclass run STRATEGY --options-source optionsdx`. Default remains `yfinance` (`data/options/<SYMBOL>.parquet` from `fetch`).
+
+## Dashboard
+
+After `pip install -e ".[dev]"` (or a normal install so `streamlit` is present), from the repo root:
+
+```bash
+lambdaclass dashboard
+```
+
+This runs `streamlit` against the packaged app at `127.0.0.1:8501` by default (`--no-headless` opens a browser). The UI is read-only: it lists `runs/`, loads bars from `data/stocks/`, and can inspect OptionsDX chains under `[optionsdx].output_dir` in your preferences.
 
 ## OptionsDX raw data normalization
 

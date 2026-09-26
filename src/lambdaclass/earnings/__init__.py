@@ -1,6 +1,7 @@
 """Earnings calendar package."""
 
 from lambdaclass.earnings.calendar import (
+    EarningsCalendar,
     context_fields,
     days_since_last_earnings,
     days_to_next_earnings,
@@ -10,6 +11,7 @@ from lambdaclass.earnings.calendar import (
 )
 
 __all__ = [
+    "EarningsCalendar",
     "context_fields",
     "days_since_last_earnings",
     "days_to_next_earnings",

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from lambdaclass.reporting.dashboard.option_strategies import preset_strangle
+from lambdaclass.options import preset_strangle
 from lambdaclass.strategies.base import OptionLeg, Strategy, StrategyContext, StrategyDecision
 
 
@@ -11,14 +11,8 @@ class StrategyImpl(Strategy):
         "offset": 10.0,
     }
 
-    def __init__(self) -> None:
-        self._open_expiry: str | None = None
-
     def on_bar(self, context: StrategyContext) -> StrategyDecision:
-        bar_date = str(context.row.get("date", ""))[:10]
-        if self._open_expiry is not None:
-            if bar_date >= self._open_expiry:
-                self._open_expiry = None
+        if context.open_options:
             return StrategyDecision(action="hold")
 
         if context.options_chain is None or context.options_chain.empty:
@@ -46,7 +40,6 @@ class StrategyImpl(Strategy):
             )
             for leg in legs
         ]
-        self._open_expiry = expiry
         return StrategyDecision(
             action="hold",
             option_legs=option_legs,

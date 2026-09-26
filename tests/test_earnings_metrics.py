@@ -12,7 +12,9 @@ from lambdaclass.reporting.earnings_metrics import (
 )
 
 
-def test_compute_earnings_events_straddle_roundtrip() -> None:
+def test_compute_earnings_events_straddle_roundtrip(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     bars = pd.DataFrame(
         {
             "date": ["2026-01-20", "2026-01-25", "2026-01-26"],
@@ -90,6 +92,16 @@ def test_compute_earnings_events_straddle_roundtrip() -> None:
         ]
     )
     iv_map = average_iv_from_option_trades(option_trades)
+    bars_copy_count = 0
+    original_copy = pd.DataFrame.copy
+
+    def tracking_copy(frame: pd.DataFrame, *args: object, **kwargs: object) -> pd.DataFrame:
+        nonlocal bars_copy_count
+        if frame is bars:
+            bars_copy_count += 1
+        return original_copy(frame, *args, **kwargs)
+
+    monkeypatch.setattr(pd.DataFrame, "copy", tracking_copy)
     events = compute_earnings_events(
         option_trades=option_trades,
         earnings=earnings,
@@ -99,6 +111,7 @@ def test_compute_earnings_events_straddle_roundtrip() -> None:
     assert len(events) == 1
     row = events.iloc[0]
     assert row["earnings_date"] == "2026-01-25"
+    assert row["implied_move_pct"] == pytest.approx(0.08, abs=1e-6)
     assert row["realized_move_pct"] == pytest.approx(0.10, abs=1e-6)
     assert row["iv_crush"] == pytest.approx(0.15, abs=1e-6)
     assert row["event_pnl"] == pytest.approx(100.0, abs=1.0)
@@ -106,6 +119,73 @@ def test_compute_earnings_events_straddle_roundtrip() -> None:
     summary = summarize_earnings_events(events)
     assert summary["earnings_event_count"] == 1.0
     assert summary["earnings_total_pnl"] == pytest.approx(100.0, abs=1.0)
+    assert bars_copy_count == 0
+
+
+@pytest.mark.parametrize(
+    "open_legs",
+    [
+        [("call", 95.0, 1), ("put", 100.0, 1)],
+        [
+            ("call", 95.0, 1),
+            ("call", 105.0, -1),
+            ("put", 95.0, -1),
+            ("put", 105.0, 1),
+        ],
+    ],
+    ids=["different-strike-pair", "iron-condor"],
+)
+def test_implied_move_is_nan_for_non_straddles(
+    open_legs: list[tuple[str, float, int]],
+) -> None:
+    option_trades = pd.DataFrame(
+        [
+            {
+                "date": "2026-01-20",
+                "action": "open",
+                "side": side,
+                "strike": strike,
+                "expiry": "2026-02-20",
+                "quantity": quantity,
+                "premium": 100.0 * quantity,
+            }
+            for side, strike, quantity in open_legs
+        ]
+        + [
+            {
+                "date": "2026-01-26",
+                "action": "close",
+                "side": side,
+                "strike": strike,
+                "expiry": "2026-02-20",
+                "quantity": -quantity,
+                "premium": -100.0 * quantity,
+            }
+            for side, strike, quantity in open_legs
+        ]
+    )
+    earnings = pd.DataFrame(
+        {
+            "earnings_date": ["2026-01-25"],
+            "timing": ["AMC"],
+        }
+    )
+    bars = pd.DataFrame(
+        {
+            "date": ["2026-01-20", "2026-01-26"],
+            "close": [100.0, 105.0],
+        }
+    )
+
+    events = compute_earnings_events(
+        option_trades=option_trades,
+        earnings=earnings,
+        bars=bars,
+    )
+
+    assert len(events) == 1
+    assert pd.isna(events.iloc[0]["implied_move_pct"])
+    assert bool(events.iloc[0]["beat_implied"]) is False
 
 
 def test_engine_passes_earnings_context() -> None:

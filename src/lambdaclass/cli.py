@@ -9,6 +9,7 @@ import time
 from collections.abc import Callable
 from datetime import UTC, date, datetime
 from pathlib import Path
+from typing import TypeVar
 
 import pandas as pd
 import typer
@@ -37,9 +38,11 @@ from lambdaclass.state import load_json, save_json
 from lambdaclass.storage.duckdb_store import DuckDBStore
 from lambdaclass.strategies.base import Strategy
 from lambdaclass.strategies.scaffolder import scaffold_strategy
+from lambdaclass.symbols import validate_symbol
 
 app = typer.Typer(help="LambdaClass stock + options backtesting CLI")
 STRATEGY_NAME_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9_]*$")
+FetchResult = TypeVar("FetchResult")
 
 
 def _repo_root() -> Path:
@@ -119,6 +122,13 @@ def _validate_strategy_name(strategy_name: str) -> str:
     return strategy_name
 
 
+def _validate_symbol(symbol: str) -> str:
+    try:
+        return validate_symbol(symbol)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc), param_hint="symbol") from exc
+
+
 def _load_strategy(path: Path) -> Strategy:
     module_name = f"strategy_{path.stem}"
     spec = importlib.util.spec_from_file_location(module_name, path)
@@ -146,7 +156,11 @@ def _find_strategy_file(strategies_dir: Path, strategy_name: str) -> Path:
     return resolved
 
 
-def _fetch_with_retry(fetch_fn: Callable[[], object], retries: int = 3, delay_seconds: float = 1.0) -> object:
+def _fetch_with_retry(
+    fetch_fn: Callable[[], FetchResult],
+    retries: int = 3,
+    delay_seconds: float = 1.0,
+) -> FetchResult:
     last_error: Exception | None = None
     for attempt in range(1, retries + 1):
         try:
@@ -174,7 +188,6 @@ def init_project(force: bool = typer.Option(False, help="Overwrite existing pref
         data_dir / "stocks",
         data_dir / "options",
         data_dir / "earnings",
-        data_dir / "cache",
         strategies_dir,
         runs_dir,
         state_dir,
@@ -195,6 +208,7 @@ def fetch_data(
     end: str | None = typer.Option(None, help="End date in YYYY-MM-DD (default: today)"),
 ) -> None:
     root = _repo_root()
+    symbol = _validate_symbol(symbol)
     prefs = _load_preferences(root)
     store = DuckDBStore(root / prefs.paths.data_dir)
     adapter = _get_adapter(prefs.defaults.data_adapter)
@@ -238,9 +252,9 @@ def fetch_earnings(
 ) -> None:
     """Fetch or import earnings calendar into data/earnings/<SYMBOL>.parquet."""
     root = _repo_root()
+    symbol = _validate_symbol(symbol)
     prefs = _load_preferences(root)
     store = DuckDBStore(root / prefs.paths.data_dir)
-    symbol = symbol.upper()
     if csv:
         path = Path(csv)
         if not path.is_file():
@@ -289,13 +303,13 @@ def run_strategy(
     ),
 ) -> None:
     root = _repo_root()
+    symbol = _validate_symbol(symbol)
     prefs = _load_preferences(root)
     strategies_dir = root / prefs.paths.strategies_dir
     validated_strategy = _validate_strategy_name(strategy_name)
     strategy_path = _find_strategy_file(strategies_dir, validated_strategy)
     strategy = _load_strategy(strategy_path)
     store = DuckDBStore(root / prefs.paths.data_dir)
-    symbol = symbol.upper()
     bars = store.read_bars(symbol, start=start, end=end)
     if bars.empty:
         raise typer.BadParameter("No stock bars found. Run `lambdaclass fetch <SYMBOL>` first.")
@@ -326,7 +340,10 @@ def run_strategy(
     run_dir = root / prefs.paths.runs_dir / month / strategy.name / run_id
     run_result = run_backtest(strategy, bars, options_chain, prefs, earnings=earnings)
     trades_path, equity_path = write_run_outputs(run_result, run_dir)
-    metrics = compute_metrics(run_result.equity_curve)
+    metrics = compute_metrics(
+        run_result.equity_curve,
+        risk_free_rate=prefs.defaults.risk_free_rate,
+    )
     events = compute_earnings_events(
         option_trades=run_result.option_trades,
         earnings=earnings,

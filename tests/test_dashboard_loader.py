@@ -7,6 +7,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
+import lambdaclass.reporting.dashboard.loader as dashboard_loader
 from lambdaclass.reporting.dashboard import loader
 
 
@@ -105,8 +106,7 @@ def test_load_run_uses_snapshot_symbol_and_treats_legacy_none_bounds_as_absent(
         log_lines=["symbol=SPY"],
     )
     (run_dir / "config.snapshot.toml").write_text(
-        '[meta]\nconfig_hash = "abc1234567"\n'
-        '[cli_overrides]\nstart = "None"\nend = "None"\nsymbol = "qqq"\n',
+        '[meta]\nconfig_hash = "abc1234567"\n[cli_overrides]\nstart = "None"\nend = "None"\nsymbol = "qqq"\n',
         encoding="utf-8",
     )
 
@@ -170,6 +170,31 @@ def test_load_bars_filters_by_date_range(tmp_path: Path) -> None:
     assert len(full) == 3
     assert filtered["date"].tolist() == ["2024-01-03", "2024-01-04"]
     assert loader.load_bars(data_dir, "MSFT").empty
+
+
+@pytest.mark.parametrize("load_name", ["load_bars", "load_chain", "load_earnings"])
+def test_market_data_loaders_reject_unsafe_symbols(tmp_path: Path, load_name: str) -> None:
+    load = getattr(loader, load_name)
+    args = (tmp_path, "../secret", []) if load_name == "load_chain" else (tmp_path, "../secret")
+
+    with pytest.raises(ValueError, match="symbol"):
+        load(*args)
+
+
+def test_load_chain_normalizes_symbol_before_delegate(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    recorded: list[str] = []
+
+    def fake_load(root: Path, symbol: str, dates: list[str]) -> pd.DataFrame:
+        recorded.append(symbol)
+        return pd.DataFrame()
+
+    monkeypatch.setattr(dashboard_loader, "load_normalized_optionsdx_chain", fake_load)
+
+    loader.load_chain(tmp_path, "brk.b", ["2024-01-02"])
+
+    assert recorded == ["BRK.B"]
 
 
 def test_derived_trade_stats() -> None:

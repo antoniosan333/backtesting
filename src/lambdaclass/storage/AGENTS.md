@@ -16,7 +16,7 @@ On append: read existing if present, `concat`, `drop_duplicates`, sort, write.
 
 Reads use ephemeral `duckdb.connect()` + `read_parquet(?)` with optional `WHERE` on `date` / `asof` / `earnings_date`.
 
-Dirs created in ctor: `stocks/`, `options/`, `earnings/`, `cache/`.
+Dirs created in ctor: `stocks/`, `options/`, `earnings/`.
 
 OptionsDX **normalized** Parquet layout is **not** under this class — it lives under `data/optionsdx/normalized/...` (see `data_adapters/optionsdx_normalize.py` and root AGENTS).
 

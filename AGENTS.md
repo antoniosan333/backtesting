@@ -10,7 +10,7 @@ Stock and options backtesting: Typer CLI, TOML preferences, local Parquet + Duck
 | CLI entry | `lambdaclass` → `lambdaclass.cli:main` |
 | Preferences | `config/preferences.toml` (created by `init`) |
 | Strategies (monthly) | `strategies/<YYYY-MM>/<name>.py` |
-| Fetched data | `data/stocks/`, `data/options/`, `data/cache/`, `data/earnings/` |
+| Fetched data | `data/stocks/`, `data/options/`, `data/earnings/` |
 | OptionsDX normalized | `data/optionsdx/normalized/<SYMBOL>/<YYYY>/<MM>/` |
 | OptionsDX reports | `data/optionsdx/reports/files/`, `data/optionsdx/reports/runs/` |
 | Backtest runs | `runs/<YYYY-MM>/<strategy>/<run_id>/` |

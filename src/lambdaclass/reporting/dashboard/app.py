@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import json
 import math
-import webbrowser
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
@@ -15,8 +14,10 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
+import lambdaclass.options as option_strategies
 from lambdaclass.config import DEFAULT_PREFERENCES, Preferences
-from lambdaclass.reporting.dashboard import charts, indicators, loader, option_strategies
+from lambdaclass.reporting.dashboard import charts, indicators, loader
+from lambdaclass.symbols import validate_symbol
 
 st.set_page_config(page_title="LambdaClass Dashboard", layout="wide")
 
@@ -126,8 +127,11 @@ def _render_run_tab(
         "total_return",
         "cagr",
         "sharpe",
+        "sortino",
+        "annualized_volatility",
         "max_drawdown",
-        "hit_rate",
+        "calmar",
+        "up_bar_ratio",
         "num_trades",
         "avg_holding_days",
         "win_rate_per_trade",
@@ -668,7 +672,12 @@ def main() -> None:
         bundles.append(bundle)
 
     active = bundles[0]
-    symbol_override = st.sidebar.text_input("Symbol", value=active["symbol"] or "SPY").strip().upper()
+    symbol_input = st.sidebar.text_input("Symbol", value=active["symbol"] or "SPY")
+    try:
+        symbol_override = validate_symbol(symbol_input)
+    except ValueError as exc:
+        st.sidebar.error(str(exc))
+        st.stop()
     start_override = st.sidebar.text_input("Start (YYYY-MM-DD)", value=active["start"])
     end_override = st.sidebar.text_input("End (YYYY-MM-DD)", value=active["end"])
 
@@ -706,12 +715,16 @@ def main() -> None:
     if any(v == "***REDACTED***" for v in snapshot_params.values()):
         st.sidebar.warning("Snapshot has redacted strategy_params; some overlays use defaults.")
 
-    if st.sidebar.button("Open report.html"):
-        report_path = Path(active["run_dir"]) / "report.html"
-        if report_path.is_file():
-            webbrowser.open(report_path.as_uri())
-        else:
-            st.sidebar.info("report.html not generated for this run.")
+    report_path = Path(active["run_dir"]) / "report.html"
+    if report_path.is_file():
+        st.sidebar.download_button(
+            "Download report.html",
+            data=report_path.read_bytes(),
+            file_name=f"{active['run_id']}-report.html",
+            mime="text/html",
+        )
+    else:
+        st.sidebar.info("report.html not generated for this run.")
 
     tab_run, tab_compare, tab_chain, tab_strategy, tab_earnings = st.tabs(
         ["Run", "Compare", "Chain", "Strategy", "Earnings"]

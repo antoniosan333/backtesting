@@ -1,5 +1,30 @@
-"""Shared options pricing primitives (BSM / Greeks / mid quotes)."""
+"""Shared option pricing, payoff, and chain-backed preset primitives."""
 
+from lambdaclass.options.payoff import find_breakevens, position_pnl
+from lambdaclass.options.presets import (
+    PRESETS,
+    Leg,
+    ParamSpec,
+    PresetFactory,
+    PresetSpec,
+    Side,
+    build_preset_legs,
+    leg_from_row,
+    legs_from_dataframe,
+    legs_to_dataframe,
+    preset_butterfly,
+    preset_iron_butterfly,
+    preset_iron_condor,
+    preset_long_call,
+    preset_long_put,
+    preset_ratio_spread,
+    preset_short_call,
+    preset_short_put,
+    preset_straddle,
+    preset_strangle,
+    preset_vertical_spread,
+    snap_to_chain,
+)
 from lambdaclass.options.pricing import (
     black_scholes_price,
     greeks,
@@ -10,10 +35,34 @@ from lambdaclass.options.pricing import (
 )
 
 __all__ = [
+    "PRESETS",
+    "Leg",
+    "ParamSpec",
+    "PresetFactory",
+    "PresetSpec",
+    "Side",
     "black_scholes_price",
+    "build_preset_legs",
+    "find_breakevens",
     "greeks",
     "intrinsic_value",
+    "leg_from_row",
+    "legs_from_dataframe",
+    "legs_to_dataframe",
     "parse_option_date",
+    "position_pnl",
+    "preset_butterfly",
+    "preset_iron_butterfly",
+    "preset_iron_condor",
+    "preset_long_call",
+    "preset_long_put",
+    "preset_ratio_spread",
+    "preset_short_call",
+    "preset_short_put",
+    "preset_straddle",
+    "preset_strangle",
+    "preset_vertical_spread",
     "safe_option_mid",
+    "snap_to_chain",
     "years_between",
 ]

@@ -70,8 +70,8 @@ def test_fetch_resolves_default_end_at_call_time_and_stamps_chain_with_today(
 
     cli.fetch_data("spy", start="2029-12-01", end=None)
 
-    assert adapter.bar_calls == [("spy", date(2029, 12, 1), date(2030, 1, 2))]
-    assert adapter.chain_calls == [("spy", date(2030, 1, 2))]
+    assert adapter.bar_calls == [("SPY", date(2029, 12, 1), date(2030, 1, 2))]
+    assert adapter.chain_calls == [("SPY", date(2030, 1, 2))]
     assert _RecordingStore.instances[-1].chain_writes == 1
 
 
@@ -146,3 +146,11 @@ def test_fetch_earnings_help_has_no_force_option() -> None:
 
     assert result.exit_code == 0
     assert "--force" not in result.output
+
+
+def test_init_does_not_create_unused_cache_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(cli, "_repo_root", lambda: tmp_path)
+
+    cli.init_project()
+
+    assert not (tmp_path / "data" / "cache").exists()

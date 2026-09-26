@@ -12,11 +12,9 @@ class DuckDBStore:
         self.stocks_dir = data_root / "stocks"
         self.options_dir = data_root / "options"
         self.earnings_dir = data_root / "earnings"
-        self.cache_dir = data_root / "cache"
         self.stocks_dir.mkdir(parents=True, exist_ok=True)
         self.options_dir.mkdir(parents=True, exist_ok=True)
         self.earnings_dir.mkdir(parents=True, exist_ok=True)
-        self.cache_dir.mkdir(parents=True, exist_ok=True)
 
     def _stock_path(self, symbol: str) -> Path:
         return self.stocks_dir / f"{symbol.upper()}.parquet"

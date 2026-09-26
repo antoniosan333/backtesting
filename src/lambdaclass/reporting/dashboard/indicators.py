@@ -39,7 +39,7 @@ def rsi(series: pd.Series, window: int = 14) -> pd.Series:
     loss = (-delta).clip(lower=0.0)
     avg_gain = gain.ewm(alpha=1.0 / window, min_periods=window, adjust=False).mean()
     avg_loss = loss.ewm(alpha=1.0 / window, min_periods=window, adjust=False).mean()
-    rs = avg_gain / avg_loss.replace(0.0, pd.NA)
+    rs = avg_gain / avg_loss.replace(0.0, float("nan"))
     out = 100.0 - (100.0 / (1.0 + rs))
     return out.fillna(100.0).where(avg_loss != 0, 100.0)
 
@@ -62,7 +62,7 @@ def equity_drawdown(equity: pd.Series) -> pd.Series:
     """Drawdown as ``(equity - running_max) / running_max``, in [-1, 0]."""
     eq = equity.astype(float)
     running_max = eq.cummax()
-    return ((eq - running_max) / running_max.replace(0, pd.NA)).fillna(0.0)
+    return ((eq - running_max) / running_max.replace(0, float("nan"))).fillna(0.0)
 
 
 def rolling_sharpe(
@@ -74,7 +74,7 @@ def rolling_sharpe(
     returns = equity.astype(float).pct_change().fillna(0.0)
     mean = returns.rolling(window=window, min_periods=window).mean()
     std = returns.rolling(window=window, min_periods=window).std(ddof=0)
-    return (mean / std.replace(0.0, pd.NA)) * math.sqrt(periods_per_year)
+    return (mean / std.replace(0.0, float("nan"))) * math.sqrt(periods_per_year)
 
 
 def monthly_returns_table(
@@ -95,8 +95,8 @@ def monthly_returns_table(
         return pd.DataFrame()
     monthly_first = df[equity_col].resample("MS").first()
     monthly_last = df[equity_col].resample("ME").last()
-    monthly_first.index = monthly_first.index.to_period("M")
-    monthly_last.index = monthly_last.index.to_period("M")
+    monthly_first.index = pd.DatetimeIndex(monthly_first.index).to_period("M")
+    monthly_last.index = pd.DatetimeIndex(monthly_last.index).to_period("M")
     common = monthly_first.index.intersection(monthly_last.index)
     if len(common) == 0:
         return pd.DataFrame()

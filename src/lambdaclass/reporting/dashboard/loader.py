@@ -20,6 +20,8 @@ from lambdaclass.data_adapters.optionsdx_chain_loader import (
     CHAIN_COLUMNS,
     load_normalized_optionsdx_chain,
 )
+from lambdaclass.reporting import metrics as reporting_metrics
+from lambdaclass.symbols import validate_symbol
 
 ARTIFACT_NAMES = ("metrics.json", "equity.parquet", "trades.csv", "config.snapshot.toml")
 
@@ -180,7 +182,8 @@ def load_run(run_dir: Path) -> RunBundle:
 
 def load_bars(data_dir: Path, symbol: str, start: str | None = None, end: str | None = None) -> pd.DataFrame:
     """Read ``data/stocks/<SYMBOL>.parquet`` via DuckDB. Empty frame if missing."""
-    bars_path = Path(data_dir) / "stocks" / f"{symbol.upper()}.parquet"
+    symbol = validate_symbol(symbol)
+    bars_path = Path(data_dir) / "stocks" / f"{symbol}.parquet"
     if not bars_path.is_file():
         return pd.DataFrame()
     query = "SELECT * FROM read_parquet(?)"
@@ -201,6 +204,7 @@ def load_bars(data_dir: Path, symbol: str, start: str | None = None, end: str | 
 
 def load_chain(normalized_root: Path, symbol: str, dates: list[str]) -> pd.DataFrame:
     """Filter normalized OptionsDX Parquet to ``dates`` (YYYY-MM-DD) for ``symbol``."""
+    symbol = validate_symbol(symbol)
     if not dates:
         return pd.DataFrame(columns=CHAIN_COLUMNS)
     return load_normalized_optionsdx_chain(Path(normalized_root), symbol, dates)
@@ -229,7 +233,8 @@ def chain_spot_estimate(bars: pd.DataFrame, asof: str) -> float:
 
 def load_earnings(data_dir: Path, symbol: str) -> pd.DataFrame:
     """Read ``data/earnings/<SYMBOL>.parquet``; empty frame if missing."""
-    path = Path(data_dir) / "earnings" / f"{symbol.upper()}.parquet"
+    symbol = validate_symbol(symbol)
+    path = Path(data_dir) / "earnings" / f"{symbol}.parquet"
     if not path.is_file():
         return pd.DataFrame(columns=["symbol", "earnings_date", "timing", "source", "fetched_at"])
     return pd.read_parquet(path)
@@ -281,48 +286,15 @@ def aggregate_metrics(runs_root: Path, run_dirs: list[Path] | None = None) -> pd
 
 
 def num_trades(trades: pd.DataFrame) -> int:
-    return 0 if trades is None or trades.empty else int(len(trades))
+    """Compatibility wrapper for the shared reporting metric."""
+    return reporting_metrics.num_trades(trades)
 
 
 def avg_holding_days(trades: pd.DataFrame) -> float:
-    """Average days between paired buy/sell rows in chronological order."""
-    if trades is None or trades.empty:
-        return 0.0
-    if "date" not in trades.columns or "action" not in trades.columns:
-        return 0.0
-    df = trades.copy()
-    df["date"] = pd.to_datetime(df["date"], errors="coerce")
-    df = df.dropna(subset=["date"]).sort_values("date").reset_index(drop=True)
-    holding: list[float] = []
-    last_buy: pd.Timestamp | None = None
-    for _, row in df.iterrows():
-        action = str(row["action"]).lower()
-        if action == "buy" and last_buy is None:
-            last_buy = row["date"]
-        elif action == "sell" and last_buy is not None:
-            holding.append((row["date"] - last_buy).days)
-            last_buy = None
-    return float(sum(holding) / len(holding)) if holding else 0.0
+    """Compatibility wrapper for the shared reporting metric."""
+    return reporting_metrics.avg_holding_days(trades)
 
 
 def win_rate_per_trade(trades: pd.DataFrame) -> float:
-    """Fraction of buy/sell pairs whose sell price > buy price."""
-    if trades is None or trades.empty:
-        return 0.0
-    if "action" not in trades.columns or "price" not in trades.columns:
-        return 0.0
-    df = trades.copy().reset_index(drop=True)
-    wins = 0
-    pairs = 0
-    last_buy: float | None = None
-    for _, row in df.iterrows():
-        action = str(row["action"]).lower()
-        price = float(row.get("price") or 0.0)
-        if action == "buy" and last_buy is None:
-            last_buy = price
-        elif action == "sell" and last_buy is not None:
-            pairs += 1
-            if price > last_buy:
-                wins += 1
-            last_buy = None
-    return float(wins / pairs) if pairs else 0.0
+    """Compatibility wrapper for the shared reporting metric."""
+    return reporting_metrics.win_rate_per_trade(trades)

@@ -10,7 +10,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 
-def _format_toml_value(value: Any) -> str:
+def _format_toml_value(value: Any, key_path: str) -> str:
     if isinstance(value, bool):
         return "true" if value else "false"
     if isinstance(value, str):
@@ -20,7 +20,7 @@ def _format_toml_value(value: Any) -> str:
         return f"{value:.10g}"
     if isinstance(value, int):
         return str(value)
-    raise TypeError(f"Unsupported TOML value type: {type(value)}")
+    raise TypeError(f"Unsupported TOML value for {key_path}: {value!r} ({type(value).__name__})")
 
 
 def _dump_toml(data: dict[str, Any]) -> str:
@@ -29,25 +29,13 @@ def _dump_toml(data: dict[str, Any]) -> str:
         if isinstance(value, dict):
             lines.append(f"[{key}]")
             for child_key, child_value in value.items():
-                lines.append(f"{child_key} = {_format_toml_value(child_value)}")
+                lines.append(f"{child_key} = {_format_toml_value(child_value, f'{key}.{child_key}')}")
             lines.append("")
         else:
-            lines.append(f"{key} = {_format_toml_value(value)}")
+            lines.append(f"{key} = {_format_toml_value(value, key)}")
     if not lines:
         return ""
     return "\n".join(lines).rstrip() + "\n"
-
-
-def _coerce_env_value(raw: str) -> Any:
-    lowered = raw.lower()
-    if lowered in {"true", "false"}:
-        return lowered == "true"
-    try:
-        if "." in raw:
-            return float(raw)
-        return int(raw)
-    except ValueError:
-        return raw
 
 
 def _set_nested_value(target: dict[str, Any], keys: list[str], value: Any) -> None:
@@ -84,7 +72,7 @@ class DefaultsConfig(BaseModel):
     stock_commission_per_share: float = Field(default=0.0, ge=0.0)
     slippage_bps: float = 2.0
     risk_free_rate: float = 0.04
-    timezone: str = "America/New_York"
+    allow_negative_cash: bool = False
 
 
 class PathsConfig(BaseModel):
@@ -128,7 +116,7 @@ class Preferences(BaseModel):
                 continue
             suffix = key.removeprefix(env_prefix).lower()
             nested_keys = suffix.split("__")
-            _set_nested_value(payload, nested_keys, _coerce_env_value(value))
+            _set_nested_value(payload, nested_keys, value)
         return cls.model_validate(payload)
 
     def to_toml(self) -> str:
@@ -151,8 +139,7 @@ def snapshot_preferences(
         key: _redact_if_sensitive(key, value) for key, value in strategy_params.items()
     }
     redacted_cli_overrides = {
-        key: _redact_if_sensitive(key, value)
-        for key, value in snapshot["cli_overrides"].items()
+        key: _redact_if_sensitive(key, value) for key, value in snapshot["cli_overrides"].items()
     }
     dump = _dump_toml(
         {

@@ -18,9 +18,9 @@ Theme default from prefs: `preferences.reporting.plot_theme` (e.g. `plotly_dark`
 - **`loader.py`**: Read-only `list_runs`, `load_run` (`RunBundle` includes `option_trades`), `load_bars`, `load_chain`, `load_earnings`, `load_events`, plus Strategy helpers. Cached in `app.py` by path + mtime.
 - **`indicators.py`**: Pure SMA/EMA/RSI/Bollinger/monthly returns/rolling Sharpe for overlays.
 - **`charts.py`**: Plotly factories including `strategy_pnl_chart` and `price_with_earnings`.
-- **`option_strategies.py`**: Presets / breakevens (pricing from `lambdaclass.options.pricing`).
+- **`option_strategies.py`**: Backward-compatible re-export shim for `lambdaclass.options`.
 
-Shared pricing: [`lambdaclass.options.pricing`](../options/pricing.py). Earnings calendar math: [`lambdaclass.earnings.calendar`](../earnings/calendar.py). Per-event stats: [`reporting/earnings_metrics.py`](earnings_metrics.py).
+Options domain code: [`lambdaclass.options`](../options/). Earnings calendar math: [`lambdaclass.earnings.calendar`](../earnings/calendar.py). Per-event stats: [`reporting/earnings_metrics.py`](earnings_metrics.py).
 
 CLI: `lambdaclass dashboard` (`cli.py`) runs `python -m streamlit run …/dashboard/app.py`.
 

@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Mapping
 from dataclasses import dataclass, field
+from datetime import date
+from types import MappingProxyType
 from typing import Any
 
 import pandas as pd
@@ -16,6 +19,16 @@ class OptionLeg:
     strike: float
     expiry: str  # YYYY-MM-DD
     quantity: int  # positive for long, negative for short
+    reduce_only: bool = False
+
+
+@dataclass(frozen=True)
+class OpenOptionView:
+    side: str
+    strike: float
+    expiry: date
+    quantity: int
+    avg_entry_mid: float
 
 
 @dataclass
@@ -28,6 +41,9 @@ class StrategyContext:
     days_since_last_earnings: int | None = None
     next_earnings_date: str | None = None
     earnings_timing: str | None = None
+    open_options: Mapping[str, OpenOptionView] = field(default_factory=lambda: MappingProxyType({}))
+    last_fills: tuple[dict[str, Any], ...] = ()
+    last_rejections: tuple[dict[str, Any], ...] = ()
 
 
 @dataclass
@@ -45,6 +61,3 @@ class Strategy(ABC):
     @abstractmethod
     def on_bar(self, context: StrategyContext) -> StrategyDecision:
         raise NotImplementedError
-
-    def on_chain(self, context: StrategyContext) -> StrategyDecision:
-        return StrategyDecision()

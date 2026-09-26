@@ -56,7 +56,13 @@ class DuckDBStore:
         if clauses:
             query = f"{query} WHERE {' AND '.join(clauses)}"
         with duckdb.connect() as con:
-            return con.execute(query, params).df()
+            bars = con.execute(query, params).df()
+        if "dividends" not in bars.columns:
+            bars["dividends"] = 0.0
+            bars.attrs["dividends_backfilled"] = True
+        else:
+            bars["dividends"] = pd.to_numeric(bars["dividends"], errors="coerce").fillna(0.0)
+        return bars
 
     def write_chain(self, symbol: str, chain: pd.DataFrame) -> Path:
         if chain.empty:

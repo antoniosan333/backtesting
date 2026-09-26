@@ -10,6 +10,8 @@ Root: `Preferences.paths.data_dir` (default `data/`).
 | `write_chain` / `read_chain` | `data/options/<SYMBOL>.parquet` | `(symbol, contract_symbol, asof)` — `keep="last"` |
 | `write_earnings` / `read_earnings` | `data/earnings/<SYMBOL>.parquet` | `(symbol, earnings_date)` — `keep="last"` |
 
+Bar columns: `date`, `open`, `high`, `low`, `close` (split-adjusted, not dividend-adjusted), `volume`, `dividends` (cash per share on the ex-date). `read_bars` backfills a missing `dividends` column with `0.0` and sets `bars.attrs["dividends_backfilled"] = True`.
+
 Earnings columns: `symbol`, `earnings_date`, `timing` (`BMO`\|`AMC`\|`unknown`), `source`, `fetched_at`. See [ADR-0006](../../../docs/decisions/0006-earnings-calendar.md).
 
 On append: read existing if present, `concat`, `drop_duplicates`, sort, write.

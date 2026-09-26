@@ -26,6 +26,8 @@ Options chain source (for strategies that use `context.options_chain`): set `[de
 
 Override strategy params without editing the file: `lambdaclass run STRATEGY --param lots=2 --param width_inner=7.5`. Keys must exist in `StrategyImpl.params`, and values are converted to the type of the default (int, float, bool, or str). Each distinct param set gets its own config hash and run directory.
 
+Sweep a grid of params: `lambdaclass sweep STRATEGY --grid width_inner=5,10,15 --grid lots=1:3:1 --metric sharpe --jobs 4`. Each combination is written as a normal run; the summary goes to `runs/<YYYY-MM>/<strategy>/_sweeps/<sweep_id>/sweep.parquet` and shows up in the dashboard's **Sweeps** tab. Grids over `--max-combos` (default 200) are refused. The best of many combinations is an optimistic estimate, so confirm it on data the sweep did not see.
+
 Strategy files are executable Python. Only run strategies you trust; treat
 `strategies/` as application code rather than an untrusted data directory.
 

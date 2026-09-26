@@ -192,6 +192,35 @@ def monthly_heatmap(
     return fig
 
 
+def sweep_heatmap(
+    pivot: pd.DataFrame,
+    *,
+    metric: str,
+    x_label: str,
+    y_label: str | None,
+    theme: str = "plotly_dark",
+) -> go.Figure:
+    """Metric over one or two swept params (``sweep_pivot`` output)."""
+    title = f"{metric} by {x_label}" + (f" × {y_label}" if y_label else "")
+    if pivot is None or pivot.empty:
+        return _empty_figure(title, theme)
+    fig = go.Figure(
+        data=go.Heatmap(
+            z=pivot.values,
+            x=[str(value) for value in pivot.columns],
+            y=[str(value) for value in pivot.index],
+            colorscale="RdYlGn",
+            text=[[f"{value:.4g}" for value in row] for row in pivot.values],
+            texttemplate="%{text}",
+            hovertemplate=f"{x_label}=%{{x}}<br>{y_label or ''}=%{{y}}<br>{metric}=%{{z:.4f}}<extra></extra>",
+        )
+    )
+    fig.update_layout(template=theme, title=title, xaxis_title=x_label, yaxis_title=y_label or "")
+    fig.update_xaxes(type="category")
+    fig.update_yaxes(type="category")
+    return fig
+
+
 def rolling_sharpe_chart(
     series: pd.Series,
     *,

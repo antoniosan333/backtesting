@@ -14,7 +14,7 @@ Theme default from prefs: `preferences.reporting.plot_theme` (e.g. `plotly_dark`
 
 ## `reporting.dashboard` (Streamlit)
 
-- **`app.py`**: Streamlit entry — sidebar filters, tabs **Run**, **Compare**, **Chain**, **Strategy**, **Earnings** (calendar table, price + earnings markers, `events.parquet` metrics for the active run).
+- **`app.py`**: Streamlit entry — sidebar filters, tabs **Run**, **Compare**, **Sweeps** (`loader.list_sweeps` / `load_sweep` / `sweep_pivot`, `charts.sweep_heatmap`), **Chain**, **Strategy**, **Earnings** (calendar table, price + earnings markers, `events.parquet` metrics for the active run).
 - **`loader.py`**: Read-only `list_runs`, `load_run` (`RunBundle` includes `option_trades`), `load_bars`, `load_chain`, `load_earnings`, `load_events`, plus Strategy helpers. Cached in `app.py` by path + mtime.
 - **`indicators.py`**: Pure SMA/EMA/RSI/Bollinger/monthly returns/rolling Sharpe for overlays.
 - **`charts.py`**: Plotly factories including `strategy_pnl_chart` and `price_with_earnings`.

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import tomllib
+from collections.abc import Callable
 from pathlib import Path
 
 import pandas as pd
@@ -8,8 +9,6 @@ import pytest
 from typer.testing import CliRunner
 
 import lambdaclass.cli as cli
-from lambdaclass.config import Preferences
-from lambdaclass.storage.duckdb_store import DuckDBStore
 
 runner = CliRunner()
 
@@ -29,30 +28,8 @@ class StrategyImpl(Strategy):
 
 
 @pytest.fixture
-def project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    prefs = Preferences()
-    prefs.reporting.save_html = False
-    prefs.risk.max_position_pct = 1.0
-    prefs.save(tmp_path / "config" / "preferences.toml")
-    strategy_dir = tmp_path / "strategies" / "2024-01"
-    strategy_dir.mkdir(parents=True)
-    (strategy_dir / "tunable.py").write_text(STRATEGY_SOURCE, encoding="utf-8")
-    DuckDBStore(tmp_path / "data").write_bars(
-        "SPY",
-        pd.DataFrame(
-            {
-                "date": ["2024-01-02", "2024-01-03"],
-                "open": [100.0, 101.0],
-                "high": [101.0, 102.0],
-                "low": [99.0, 100.0],
-                "close": [100.0, 101.0],
-                "volume": [1000, 1100],
-                "dividends": [0.0, 0.0],
-            }
-        ),
-    )
-    monkeypatch.setattr(cli, "_repo_root", lambda: tmp_path)
-    return tmp_path
+def project(make_project: Callable[..., Path]) -> Path:
+    return make_project("tunable", STRATEGY_SOURCE, [100.0, 101.0])
 
 
 def _single_run_dir(root: Path) -> Path:

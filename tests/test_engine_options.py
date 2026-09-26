@@ -48,6 +48,8 @@ def _chain_row(
         "expiry": expiry,
         "asof": asof,
         "symbol": "ZZZ",
+        "underlying_last": 100.0,
+        "dte": float((pd.Timestamp(expiry) - pd.Timestamp(asof)).days),
     }
 
 
@@ -266,3 +268,51 @@ def test_commission_and_slippage_on_option_fill() -> None:
     assert float(row["commission"]) == pytest.approx(0.65)
     # premium 400 + slip 4 + commission 0.65
     assert result.final_cash < 100_000.0 - 400.0
+
+
+class CaptureExpectedMoves(Strategy):
+    name = "capture_expected_moves"
+    params: dict = {}
+
+    def __init__(self) -> None:
+        self.seen: list[pd.DataFrame | None] = []
+
+    def on_bar(self, context: StrategyContext) -> StrategyDecision:
+        self.seen.append(context.expected_moves)
+        return StrategyDecision()
+
+
+def test_expected_moves_are_available_to_strategy_and_written(tmp_path: Path) -> None:
+    asof = "2026-01-01"
+    expiry = "2026-02-01"
+    chain = pd.DataFrame(
+        [
+            _chain_row(
+                asof,
+                contract=f"ZZZ_{side}",
+                side=side,
+                strike=100.0,
+                expiry=expiry,
+                mid=4.0,
+            )
+            for side in ("call", "put")
+        ]
+    )
+    strategy = CaptureExpectedMoves()
+
+    result = run_backtest(strategy, _bars([(asof, 100.0)]), chain, _prefs())
+
+    assert strategy.seen[0] is not None
+    assert strategy.seen[0].iloc[0]["expiry"] == expiry
+    assert not result.expected_moves.empty
+    write_run_outputs(result, tmp_path)
+    written = pd.read_parquet(tmp_path / "expected_moves.parquet")
+    assert written["asof"].tolist() == [asof]
+
+
+def test_expected_moves_are_none_without_a_chain() -> None:
+    strategy = CaptureExpectedMoves()
+
+    run_backtest(strategy, _bars([("2026-01-01", 100.0)]), pd.DataFrame(), _prefs())
+
+    assert strategy.seen == [None]

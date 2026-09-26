@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pandas as pd
-
 from lambdaclass.data_adapters.optionsdx_chain_loader import CHAIN_COLUMNS, load_normalized_optionsdx_chain
 from lambdaclass.data_adapters.optionsdx_normalize import NormalizeOptions, run_normalize
 

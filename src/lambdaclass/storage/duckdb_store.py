@@ -110,9 +110,7 @@ class DuckDBStore:
     ) -> pd.DataFrame:
         path = self._earnings_path(symbol)
         if not path.exists():
-            return pd.DataFrame(
-                columns=["symbol", "earnings_date", "timing", "source", "fetched_at"]
-            )
+            return pd.DataFrame(columns=["symbol", "earnings_date", "timing", "source", "fetched_at"])
         query = "SELECT * FROM read_parquet(?)"
         clauses: list[str] = []
         params: list[str] = [str(path)]

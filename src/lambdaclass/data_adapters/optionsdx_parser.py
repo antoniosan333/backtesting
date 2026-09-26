@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import csv
 import re
+from collections.abc import Iterator
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from io import StringIO
 from pathlib import Path
-from typing import Any, Iterator
-
-import pandas as pd
+from typing import Any
 
 
 def strip_header_name(raw: str) -> str:
@@ -63,16 +62,16 @@ def _parse_quote_datetime(quote_readtime: str, quote_unix: int | None) -> dateti
     t = (quote_readtime or "").strip()
     if not t:
         if quote_unix is not None:
-            return datetime.fromtimestamp(quote_unix, tz=timezone.utc)
+            return datetime.fromtimestamp(quote_unix, tz=UTC)
         return None
     for fmt in ("%Y-%m-%d %H:%M", "%Y-%m-%d %H:%M:%S"):
         try:
             dt = datetime.strptime(t, fmt)
-            return dt.replace(tzinfo=timezone.utc)
+            return dt.replace(tzinfo=UTC)
         except ValueError:
             continue
     if quote_unix is not None:
-        return datetime.fromtimestamp(quote_unix, tz=timezone.utc)
+        return datetime.fromtimestamp(quote_unix, tz=UTC)
     return None
 
 

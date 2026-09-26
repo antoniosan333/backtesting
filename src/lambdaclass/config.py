@@ -119,7 +119,7 @@ class Preferences(BaseModel):
     optionsdx: OptionsDXNormalizeConfig = Field(default_factory=OptionsDXNormalizeConfig)
 
     @classmethod
-    def load(cls, path: Path, env_prefix: str = "LAMBDACLASS__") -> "Preferences":
+    def load(cls, path: Path, env_prefix: str = "LAMBDACLASS__") -> Preferences:
         payload: dict[str, Any] = {}
         if path.exists():
             payload = tomllib.loads(path.read_text(encoding="utf-8"))
@@ -151,7 +151,8 @@ def snapshot_preferences(
         key: _redact_if_sensitive(key, value) for key, value in strategy_params.items()
     }
     redacted_cli_overrides = {
-        key: _redact_if_sensitive(key, value) for key, value in cli_overrides.items()
+        key: _redact_if_sensitive(key, value)
+        for key, value in snapshot["cli_overrides"].items()
     }
     dump = _dump_toml(
         {
@@ -178,7 +179,7 @@ def build_snapshot_payload(
     return {
         "preferences": preferences.model_dump(),
         "strategy_params": strategy_params,
-        "cli_overrides": cli_overrides,
+        "cli_overrides": {key: value for key, value in cli_overrides.items() if value is not None},
     }
 
 

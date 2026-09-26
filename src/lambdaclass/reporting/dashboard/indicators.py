@@ -65,7 +65,9 @@ def equity_drawdown(equity: pd.Series) -> pd.Series:
     return ((eq - running_max) / running_max.replace(0, pd.NA)).fillna(0.0)
 
 
-def rolling_sharpe(equity: pd.Series, window: int = 21, periods_per_year: int = TRADING_DAYS_PER_YEAR) -> pd.Series:
+def rolling_sharpe(
+    equity: pd.Series, window: int = 21, periods_per_year: int = TRADING_DAYS_PER_YEAR
+) -> pd.Series:
     """Annualized rolling Sharpe over ``window`` periods of pct returns."""
     if window <= 1:
         raise ValueError("window must be > 1")
@@ -75,7 +77,9 @@ def rolling_sharpe(equity: pd.Series, window: int = 21, periods_per_year: int = 
     return (mean / std.replace(0.0, pd.NA)) * math.sqrt(periods_per_year)
 
 
-def monthly_returns_table(equity: pd.DataFrame, date_col: str = "date", equity_col: str = "equity") -> pd.DataFrame:
+def monthly_returns_table(
+    equity: pd.DataFrame, date_col: str = "date", equity_col: str = "equity"
+) -> pd.DataFrame:
     """Year x Month pivot of monthly compounded returns.
 
     Resamples ``equity`` to month-end last value, then computes ``last/first - 1``
@@ -109,7 +113,13 @@ def monthly_returns_table(equity: pd.DataFrame, date_col: str = "date", equity_c
     return pivot.reindex(columns=range(1, 13))
 
 
-def derived_run_stats(metrics: dict[str, float], trades: pd.DataFrame, num_trades_value: int, holding_value: float, win_rate_value: float) -> dict[str, float]:
+def derived_run_stats(
+    metrics: dict[str, float],
+    trades: pd.DataFrame,
+    num_trades_value: int,
+    holding_value: float,
+    win_rate_value: float,
+) -> dict[str, float]:
     """Combine engine-emitted metrics with dashboard-derived stats into a single dict."""
     out: dict[str, float] = {k: float(v) for k, v in metrics.items()}
     out["num_trades"] = float(num_trades_value)

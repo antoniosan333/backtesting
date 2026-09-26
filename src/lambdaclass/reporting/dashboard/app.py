@@ -95,7 +95,9 @@ def _format_run_label(run_dir_str: str) -> str:
     return Path(run_dir_str).name
 
 
-def _render_run_tab(bundle_dict: dict[str, Any], bars: pd.DataFrame, indicator_overlays: dict[str, pd.Series]) -> None:
+def _render_run_tab(
+    bundle_dict: dict[str, Any], bars: pd.DataFrame, indicator_overlays: dict[str, pd.Series]
+) -> None:
     st.subheader(f"{bundle_dict['strategy']} - {bundle_dict['run_id']}")
     cols = st.columns(3)
     cols[0].metric("Symbol", bundle_dict["symbol"] or "-")
@@ -190,9 +192,7 @@ def _render_compare_tab(bundle_dicts: list[dict[str, Any]], runs_root: Path) -> 
     if len(bundle_dicts) < 2:
         st.info("Select at least 2 runs in the sidebar to enable comparison.")
         return
-    runs_for_overlay = {
-        f"{b['strategy']}/{b['run_id']}": b["equity_curve"] for b in bundle_dicts
-    }
+    runs_for_overlay = {f"{b['strategy']}/{b['run_id']}": b["equity_curve"] for b in bundle_dicts}
     normalize = st.checkbox("Normalize equity to 1.0 at start", value=True)
     st.plotly_chart(
         charts.equity_overlay(runs_for_overlay, normalize=normalize),
@@ -200,9 +200,7 @@ def _render_compare_tab(bundle_dicts: list[dict[str, Any]], runs_root: Path) -> 
     )
 
     st.markdown("### Side-by-side metrics")
-    table = _aggregate_metrics_cached(
-        str(runs_root), tuple(b["run_dir"] for b in bundle_dicts)
-    )
+    table = _aggregate_metrics_cached(str(runs_root), tuple(b["run_dir"] for b in bundle_dicts))
     if table.empty:
         st.info("No metrics available for selected runs.")
     else:
@@ -220,7 +218,9 @@ def _render_compare_tab(bundle_dicts: list[dict[str, Any]], runs_root: Path) -> 
             )
 
 
-def _render_chain_tab(active_bundle: dict[str, Any], bars: pd.DataFrame, prefs: Preferences, root: Path) -> None:
+def _render_chain_tab(
+    active_bundle: dict[str, Any], bars: pd.DataFrame, prefs: Preferences, root: Path
+) -> None:
     if active_bundle["symbol"] == "" or bars.empty:
         st.info("Need a run with a known symbol and fetched bars to inspect the chain.")
         return
@@ -508,14 +508,13 @@ def _render_strategy_tab(symbol: str, bars: pd.DataFrame, prefs: Preferences, ro
     if out.get("unbounded_down"):
         flags.append("tail risk / uncapped P&L toward lower spot (off grid)")
     st.caption(
-        "Breakevens (expiry): " + (", ".join(f"{x:.2f}" for x in be) if be else "none in range")
+        "Breakevens (expiry): "
+        + (", ".join(f"{x:.2f}" for x in be) if be else "none in range")
         + (" | " + "; ".join(flags) if flags else "")
     )
 
     theme = prefs.reporting.plot_theme
-    title_label = (
-        option_strategies.PRESETS[preset].label if preset in option_strategies.PRESETS else "Custom"
-    )
+    title_label = option_strategies.PRESETS[preset].label if preset in option_strategies.PRESETS else "Custom"
     if multi_expiry:
         st.info(
             "Legs span multiple expiries — the 'at expiration' curve (all legs intrinsic at once) "
@@ -573,11 +572,12 @@ def _render_earnings_tab(
     earnings = _load_earnings_cached(str(data_dir), symbol)
     if earnings.empty:
         st.warning(
-            f"No earnings calendar for {symbol}. Run `lambdaclass fetch-earnings {symbol}` "
-            "(or `--csv PATH`)."
+            f"No earnings calendar for {symbol}. Run `lambdaclass fetch-earnings {symbol}` (or `--csv PATH`)."
         )
     else:
-        st.caption(f"{len(earnings)} events · source={earnings['source'].iloc[-1] if 'source' in earnings.columns else '?'}")
+        st.caption(
+            f"{len(earnings)} events · source={earnings['source'].iloc[-1] if 'source' in earnings.columns else '?'}"
+        )
         st.dataframe(earnings, use_container_width=True)
 
     if bars.empty:
@@ -631,9 +631,7 @@ def main() -> None:
         st.warning(f"No runs found under {runs_root}. Run `lambdaclass run STRATEGY` first.")
         return
 
-    selected_strategies = st.sidebar.multiselect(
-        "Strategies", options=strategies, default=strategies[:1]
-    )
+    selected_strategies = st.sidebar.multiselect("Strategies", options=strategies, default=strategies[:1])
     if not selected_strategies:
         st.info("Pick at least one strategy in the sidebar.")
         return

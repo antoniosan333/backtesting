@@ -107,6 +107,13 @@ def _empty_option_trades() -> pd.DataFrame:
     )
 
 
+def _optional_snapshot_value(value: Any) -> str:
+    if value is None:
+        return ""
+    text = str(value).strip()
+    return "" if text.lower() == "none" else text
+
+
 def load_run(run_dir: Path) -> RunBundle:
     run_dir = Path(run_dir).resolve()
     if not _is_run_dir(run_dir):
@@ -136,18 +143,20 @@ def load_run(run_dir: Path) -> RunBundle:
 
     cli_overrides = snapshot.get("cli_overrides", {}) if isinstance(snapshot, dict) else {}
     snap_meta = snapshot.get("meta", {}) if isinstance(snapshot, dict) else {}
+    snapshot_start = _optional_snapshot_value(cli_overrides.get("start"))
+    snapshot_end = _optional_snapshot_value(cli_overrides.get("end"))
 
     if not equity_curve.empty:
         equity_dates = equity_curve["date"].astype(str)
-        start = str(cli_overrides.get("start") or equity_dates.iloc[0])
-        end = str(cli_overrides.get("end") or equity_dates.iloc[-1])
+        start = snapshot_start or str(equity_dates.iloc[0])
+        end = snapshot_end or str(equity_dates.iloc[-1])
     else:
-        start = str(cli_overrides.get("start") or "")
-        end = str(cli_overrides.get("end") or "")
+        start = snapshot_start
+        end = snapshot_end
 
-    symbol = ""
+    symbol = _optional_snapshot_value(cli_overrides.get("symbol"))
     log_path = run_dir / "run.log"
-    if log_path.is_file():
+    if not symbol and log_path.is_file():
         for line in log_path.read_text(encoding="utf-8").splitlines():
             if line.startswith("symbol="):
                 symbol = line.split("=", 1)[1].strip()
@@ -251,9 +260,7 @@ def aggregate_metrics(runs_root: Path, run_dirs: list[Path] | None = None) -> pd
             if not metrics_path.is_file():
                 continue
             try:
-                df = con.execute(
-                    "SELECT * FROM read_json_auto(?)", [str(metrics_path)]
-                ).df()
+                df = con.execute("SELECT * FROM read_json_auto(?)", [str(metrics_path)]).df()
             except duckdb.Error:
                 continue
             if df.empty:
@@ -265,9 +272,11 @@ def aggregate_metrics(runs_root: Path, run_dirs: list[Path] | None = None) -> pd
             rows.append(row)
     if not rows:
         return pd.DataFrame()
-    columns = ["strategy", "run_id"] + sorted(
-        {k for r in rows for k in r.keys()} - {"strategy", "run_id", "run_dir"}
-    ) + ["run_dir"]
+    columns = (
+        ["strategy", "run_id"]
+        + sorted({k for r in rows for k in r} - {"strategy", "run_id", "run_dir"})
+        + ["run_dir"]
+    )
     return pd.DataFrame(rows)[columns]
 
 

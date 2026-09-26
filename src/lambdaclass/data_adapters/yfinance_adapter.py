@@ -28,6 +28,7 @@ class YFinanceAdapter:
 
     def get_option_chain(self, symbol: str, asof: date, expiry: date | None = None) -> pd.DataFrame:
         ticker = yf.Ticker(symbol)
+        current_asof = date.today()
         expirations = ticker.options or []
         if not expirations:
             return pd.DataFrame()
@@ -43,7 +44,7 @@ class YFinanceAdapter:
             puts["side"] = "put"
             merged = pd.concat([calls, puts], ignore_index=True)
             merged["expiry"] = exp
-            merged["asof"] = asof.isoformat()
+            merged["asof"] = current_asof.isoformat()
             frames.append(merged)
         if not frames:
             return pd.DataFrame()

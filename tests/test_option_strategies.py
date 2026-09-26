@@ -67,7 +67,9 @@ def test_long_call_breakeven_equals_strike_plus_premium_per_share() -> None:
     legs = [
         opts.Leg("x", "call", 100.0, "2026-12-18", 0.25, 4.0, 1),
     ]
-    out = opts.position_pnl(legs, eval_date="2026-05-01", r=0.04, iv_shift=0.0, spot=100.0, grid_pct=0.5, grid_n=801)
+    out = opts.position_pnl(
+        legs, eval_date="2026-05-01", r=0.04, iv_shift=0.0, spot=100.0, grid_pct=0.5, grid_n=801
+    )
     be = out["breakevens"]
     assert len(be) >= 1
     assert be[0] == pytest.approx(104.0, abs=0.15)
@@ -95,7 +97,9 @@ def test_straddle_two_breakevens_symmetric() -> None:
         opts.Leg("c", "call", 100.0, "2026-12-18", 0.3, 4.0, 1),
         opts.Leg("p", "put", 100.0, "2026-12-18", 0.3, 4.0, 1),
     ]
-    out = opts.position_pnl(legs, eval_date="2026-05-01", r=0.04, iv_shift=0.0, spot=100.0, grid_pct=0.6, grid_n=1201)
+    out = opts.position_pnl(
+        legs, eval_date="2026-05-01", r=0.04, iv_shift=0.0, spot=100.0, grid_pct=0.6, grid_n=1201
+    )
     be = out["breakevens"]
     assert len(be) == 2
     lo, hi = min(be), max(be)
@@ -109,7 +113,9 @@ def test_iron_condor_payoff_shape_credit_flat_middle() -> None:
         opts.Leg("sc", "call", 110.0, "2026-12-18", 0.35, 3.0, -1),
         opts.Leg("lc", "call", 120.0, "2026-12-18", 0.35, 0.5, 1),
     ]
-    out = opts.position_pnl(legs, eval_date="2026-05-01", r=0.04, iv_shift=0.0, spot=100.0, grid_pct=0.8, grid_n=1601)
+    out = opts.position_pnl(
+        legs, eval_date="2026-05-01", r=0.04, iv_shift=0.0, spot=100.0, grid_pct=0.8, grid_n=1601
+    )
     assert len(out["breakevens"]) >= 2
     assert out["max_profit"] > 0.0
     mid = (out["S_grid"] >= 92.0) & (out["S_grid"] <= 108.0)
@@ -123,7 +129,9 @@ def test_iron_butterfly_payoff_triangle_peak_near_center() -> None:
         opts.Leg("lp", "put", 90.0, "2026-12-18", 0.3, 1.0, 1),
         opts.Leg("lc", "call", 110.0, "2026-12-18", 0.3, 1.0, 1),
     ]
-    out = opts.position_pnl(legs, eval_date="2026-05-01", r=0.04, iv_shift=0.0, spot=100.0, grid_pct=0.5, grid_n=801)
+    out = opts.position_pnl(
+        legs, eval_date="2026-05-01", r=0.04, iv_shift=0.0, spot=100.0, grid_pct=0.5, grid_n=801
+    )
     S = out["S_grid"]
     pe = out["pnl_expiry"]
     i100 = int(np.abs(S - 100.0).argmin())
@@ -194,4 +202,3 @@ def test_every_preset_builds_legs_with_defaults() -> None:
         legs = opts.build_preset_legs(key, ch, "2026-12-18", 100.0, params)
         assert legs, key
         assert all(isinstance(lg, opts.Leg) for lg in legs)
-

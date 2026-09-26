@@ -70,9 +70,7 @@ class StrategyImpl(Strategy):
         if chosen is None:
             return StrategyDecision(action="hold")
 
-        legs = preset_straddle(
-            context.options_chain, chosen, spot, lots=int(self.params["lots"])
-        )
+        legs = preset_straddle(context.options_chain, chosen, spot, lots=int(self.params["lots"]))
         option_legs = [
             OptionLeg(
                 contract_symbol=leg.contract_symbol,

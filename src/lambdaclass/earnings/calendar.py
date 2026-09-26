@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from typing import Any
 
 import pandas as pd
@@ -70,7 +70,7 @@ def normalize_earnings_frame(df: pd.DataFrame, *, symbol: str, source: str) -> p
             "earnings_date": frame["earnings_date"].map(lambda x: parse_date(x).isoformat()),
             "timing": frame["timing"].map(normalize_timing),
             "source": source,
-            "fetched_at": datetime.now(tz=timezone.utc).replace(microsecond=0).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "fetched_at": datetime.now(tz=UTC).replace(microsecond=0).strftime("%Y-%m-%dT%H:%M:%SZ"),
         }
     )
     out = out.drop_duplicates(subset=["symbol", "earnings_date"], keep="last")

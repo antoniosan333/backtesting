@@ -170,9 +170,9 @@ def _apply_option_fill(
         # Add to same-direction position — average entry mid
         total_qty = existing.quantity + qty
         if total_qty != 0:
-            existing.avg_entry_mid = (
-                existing.avg_entry_mid * abs(existing.quantity) + mid * abs(qty)
-            ) / abs(total_qty)
+            existing.avg_entry_mid = (existing.avg_entry_mid * abs(existing.quantity) + mid * abs(qty)) / abs(
+                total_qty
+            )
         existing.quantity = total_qty
         existing.last_iv = iv
 
@@ -204,10 +204,7 @@ def run_backtest(
 ) -> RunResult:
     bars_sorted = bars.sort_values("date").reset_index(drop=True)
     chain_by_date = (
-        {
-            str(key): frame.reset_index(drop=True)
-            for key, frame in options_chain.groupby("asof")
-        }
+        {str(key): frame.reset_index(drop=True) for key, frame in options_chain.groupby("asof")}
         if not options_chain.empty
         else {}
     )
@@ -229,9 +226,7 @@ def run_backtest(
         earn_ctx = context_fields(date_key, earnings_df)
 
         # Settle expired options before strategy decisions
-        expired = [
-            sym for sym, pos in open_options.items() if bar_date >= pos.expiry
-        ]
+        expired = [sym for sym, pos in open_options.items() if bar_date >= pos.expiry]
         for sym in expired:
             pos = open_options.pop(sym)
             settlement = pos.quantity * 100.0 * intrinsic_value(pos.side, pos.strike, price)

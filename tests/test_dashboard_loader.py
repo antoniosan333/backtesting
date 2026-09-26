@@ -24,7 +24,13 @@ def _write_run(
 ) -> Path:
     run_dir = runs_root / month / strategy / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
-    metrics = metrics or {"total_return": 0.1, "sharpe": 1.2, "max_drawdown": -0.05, "hit_rate": 0.55, "cagr": 0.08}
+    metrics = metrics or {
+        "total_return": 0.1,
+        "sharpe": 1.2,
+        "max_drawdown": -0.05,
+        "hit_rate": 0.55,
+        "cagr": 0.08,
+    }
     (run_dir / "metrics.json").write_text(json.dumps(metrics), encoding="utf-8")
     if bars:
         df = pd.DataFrame(bars, columns=["date", "equity"])
@@ -39,11 +45,12 @@ def _write_run(
     snapshot = (
         '[meta]\nconfig_hash = "abc1234567"\n'
         '[strategy_params]\nfast = "10"\nslow = "30"\n'
-        '[cli_overrides]\nstart = "2024-01-02"\nend = "2024-01-05"\n'
-        + snapshot_extra
+        '[cli_overrides]\nstart = "2024-01-02"\nend = "2024-01-05"\n' + snapshot_extra
     )
     (run_dir / "config.snapshot.toml").write_text(snapshot, encoding="utf-8")
-    log = "\n".join(log_lines or [f"strategy={strategy}", "symbol=SPY", "rows=4", "trades=0", "config_hash=abc1234567"])
+    log = "\n".join(
+        log_lines or [f"strategy={strategy}", "symbol=SPY", "rows=4", "trades=0", "config_hash=abc1234567"]
+    )
     (run_dir / "run.log").write_text(log, encoding="utf-8")
     return run_dir
 
@@ -86,10 +93,58 @@ def test_load_run_returns_bundle_with_snapshot_fields(tmp_path: Path) -> None:
     assert bundle.option_trades.empty
 
 
+def test_load_run_uses_snapshot_symbol_and_treats_legacy_none_bounds_as_absent(
+    tmp_path: Path,
+) -> None:
+    run_dir = _write_run(
+        tmp_path / "runs",
+        month="2024-01",
+        strategy="alpha",
+        run_id="legacy",
+        bars=[("2024-01-02", 100000.0), ("2024-01-03", 100500.0)],
+        log_lines=["symbol=SPY"],
+    )
+    (run_dir / "config.snapshot.toml").write_text(
+        '[meta]\nconfig_hash = "abc1234567"\n'
+        '[cli_overrides]\nstart = "None"\nend = "None"\nsymbol = "qqq"\n',
+        encoding="utf-8",
+    )
+
+    bundle = loader.load_run(run_dir)
+
+    assert bundle.symbol == "QQQ"
+    assert bundle.start == "2024-01-02"
+    assert bundle.end == "2024-01-03"
+
+
+def test_load_run_falls_back_to_log_symbol_for_legacy_snapshot(tmp_path: Path) -> None:
+    run_dir = _write_run(
+        tmp_path / "runs",
+        month="2024-01",
+        strategy="alpha",
+        run_id="legacy",
+        log_lines=["symbol=iwm"],
+    )
+
+    assert loader.load_run(run_dir).symbol == "IWM"
+
+
 def test_aggregate_metrics_returns_one_row_per_run(tmp_path: Path) -> None:
     runs_root = tmp_path / "runs"
-    a = _write_run(runs_root, month="2024-01", strategy="alpha", run_id="20240102T000000Z-aaa-1111111111", metrics={"sharpe": 1.0, "total_return": 0.05})
-    b = _write_run(runs_root, month="2024-01", strategy="beta", run_id="20240103T000000Z-bbb-2222222222", metrics={"sharpe": 0.7, "total_return": 0.02})
+    a = _write_run(
+        runs_root,
+        month="2024-01",
+        strategy="alpha",
+        run_id="20240102T000000Z-aaa-1111111111",
+        metrics={"sharpe": 1.0, "total_return": 0.05},
+    )
+    b = _write_run(
+        runs_root,
+        month="2024-01",
+        strategy="beta",
+        run_id="20240103T000000Z-bbb-2222222222",
+        metrics={"sharpe": 0.7, "total_return": 0.02},
+    )
     table = loader.aggregate_metrics(runs_root, [a, b])
     assert len(table) == 2
     assert set(table["strategy"]) == {"alpha", "beta"}
@@ -137,7 +192,9 @@ def test_derived_trade_stats() -> None:
 
 def test_run_dir_mtime_ns_changes_with_writes(tmp_path: Path) -> None:
     runs_root = tmp_path / "runs"
-    run_dir = _write_run(runs_root, month="2024-01", strategy="alpha", run_id="20240102T000000Z-aaa-1111111111")
+    run_dir = _write_run(
+        runs_root, month="2024-01", strategy="alpha", run_id="20240102T000000Z-aaa-1111111111"
+    )
     mt1 = loader.run_dir_mtime_ns(run_dir)
     time.sleep(0.05)
     (run_dir / "metrics.json").write_text(json.dumps({"total_return": 0.2}), encoding="utf-8")

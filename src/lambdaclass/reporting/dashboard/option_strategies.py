@@ -322,7 +322,9 @@ def preset_straddle(chain: pd.DataFrame, expiry: str, spot: float, *, lots: int 
     ]
 
 
-def preset_strangle(chain: pd.DataFrame, expiry: str, spot: float, *, offset: float, lots: int = 1) -> list[Leg]:
+def preset_strangle(
+    chain: pd.DataFrame, expiry: str, spot: float, *, offset: float, lots: int = 1
+) -> list[Leg]:
     off = abs(float(offset))
     q = abs(int(lots))
     return [
@@ -331,7 +333,9 @@ def preset_strangle(chain: pd.DataFrame, expiry: str, spot: float, *, offset: fl
     ]
 
 
-def preset_butterfly(chain: pd.DataFrame, expiry: str, spot: float, *, width: float, lots: int = 1) -> list[Leg]:
+def preset_butterfly(
+    chain: pd.DataFrame, expiry: str, spot: float, *, width: float, lots: int = 1
+) -> list[Leg]:
     """Long call K-w, short 2× call K, long call K+w (same expiry)."""
     w = abs(float(width))
     q = abs(int(lots))

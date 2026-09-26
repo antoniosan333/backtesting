@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Sequence
 
 import pandas as pd
 
@@ -84,7 +84,11 @@ def load_normalized_optionsdx_chain(
 
     raw["_contract"] = raw.apply(_contract_cell, axis=1)
 
-    oi = raw["open_interest"] if "open_interest" in raw.columns else pd.Series(0.0, index=raw.index, dtype=float)
+    oi = (
+        raw["open_interest"]
+        if "open_interest" in raw.columns
+        else pd.Series(0.0, index=raw.index, dtype=float)
+    )
     out = pd.DataFrame(
         {
             "contract_symbol": raw["_contract"],

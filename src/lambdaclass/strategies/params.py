@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Iterable, Mapping
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from lambdaclass.strategies.base import Strategy
@@ -50,9 +51,12 @@ def coerce_param(name: str, value: Any, default: Any) -> Any:
         if isinstance(value, float) and value.is_integer():
             return int(value)
         try:
-            return int(str(value).strip())
-        except ValueError:
+            number = Decimal(str(value).strip())
+        except InvalidOperation:
             raise ParamError(f"{name} expects an integer, got {value!r}") from None
+        if not number.is_finite() or number != number.to_integral_value():
+            raise ParamError(f"{name} expects an integer, got {value!r}")
+        return int(number)
     if isinstance(default, float):
         if isinstance(value, bool):
             raise ParamError(f"{name} expects a number, got {value!r}")

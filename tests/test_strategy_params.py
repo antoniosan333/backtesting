@@ -46,6 +46,7 @@ def test_parse_assignments_rejects_repeated_key() -> None:
     ("value", "default", "expected"),
     [
         ("2", 1, 2),
+        ("3.0", 1, 3),
         (3.0, 1, 3),
         ("7.5", 10.0, 7.5),
         ("2", 10.0, 2.0),

@@ -17,6 +17,7 @@ import streamlit as st
 import lambdaclass.options as option_strategies
 from lambdaclass.config import DEFAULT_PREFERENCES, Preferences
 from lambdaclass.reporting.dashboard import charts, indicators, loader
+from lambdaclass.runs.layout import PARAM_PREFIX, SWEEP_RESULTS_FILE
 from lambdaclass.symbols import validate_symbol
 
 st.set_page_config(page_title="LambdaClass Dashboard", layout="wide")
@@ -622,6 +623,121 @@ def _render_earnings_tab(
         )
 
 
+@st.cache_data(show_spinner=False)
+def _load_sweep_cached(sweep_dir_str: str, mtime_ns: int) -> dict[str, Any]:
+    bundle = loader.load_sweep(Path(sweep_dir_str))
+    return {
+        "sweep_id": bundle.sweep_id,
+        "strategy": bundle.strategy,
+        "manifest": bundle.manifest,
+        "results": bundle.results,
+    }
+
+
+def _sweep_mtime_ns(sweep_dir: Path) -> int:
+    path = sweep_dir / SWEEP_RESULTS_FILE
+    return path.stat().st_mtime_ns if path.is_file() else 0
+
+
+def _render_sweeps_tab(runs_root: Path, selected_strategies: list[str], prefs: Preferences) -> None:
+    sweep_dirs = loader.list_sweeps(runs_root)
+    if not sweep_dirs:
+        st.info("No sweeps yet. Run `lambdaclass sweep STRATEGY --grid key=a,b` to create one.")
+        return
+    sweeps = [_load_sweep_cached(str(path), _sweep_mtime_ns(path)) for path in sweep_dirs]
+    in_selection = [index for index, sweep in enumerate(sweeps) if sweep["strategy"] in selected_strategies]
+    choice = st.selectbox(
+        "Sweep",
+        options=list(range(len(sweeps))),
+        index=in_selection[0] if in_selection else 0,
+        format_func=lambda index: (
+            f"{sweeps[index]['strategy']} · {sweeps[index]['sweep_id']} · "
+            f"{len(sweeps[index]['results'])} combos"
+        ),
+    )
+    sweep = sweeps[choice]
+    manifest: dict[str, Any] = sweep["manifest"]
+    results: pd.DataFrame = sweep["results"]
+    fill_timing = (manifest.get("preferences") or {}).get("defaults", {}).get("fill_timing", "same_close")
+    st.caption(
+        f"Symbol {manifest.get('symbol', '?')} · window {manifest.get('start') or 'start'} → "
+        f"{manifest.get('end') or 'end'} · chain {manifest.get('options_source', '?')} · "
+        f"fills {fill_timing} · {manifest.get('completed', 0)} ok / {manifest.get('failed', 0)} failed"
+    )
+    if manifest.get("fixed_params"):
+        st.caption("Fixed params: " + ", ".join(f"{k}={v}" for k, v in manifest["fixed_params"].items()))
+    if results.empty:
+        st.warning("This sweep has no results.")
+        return
+
+    params = loader.sweep_param_names(results)
+    metrics = loader.sweep_metric_names(results)
+    if not metrics:
+        st.warning("No numeric metrics in this sweep (all combinations failed?).")
+        st.dataframe(results, use_container_width=True)
+        return
+    manifest_metric = str(manifest.get("metric", ""))
+    default_metric = manifest_metric if manifest_metric in metrics else metrics[0]
+    col_metric, col_order = st.columns([3, 1])
+    metric = col_metric.selectbox("Metric", options=metrics, index=metrics.index(default_metric))
+    minimize = col_order.checkbox("Lower is better", value=bool(manifest.get("minimize", False)))
+
+    ranked = results.sort_values(metric, ascending=minimize, kind="stable", na_position="last")
+    st.markdown("### Results")
+    st.dataframe(ranked, use_container_width=True, hide_index=True)
+    st.download_button(
+        "Download sweep.csv",
+        data=ranked.to_csv(index=False).encode("utf-8"),
+        file_name=f"{sweep['sweep_id']}-sweep.csv",
+        mime="text/csv",
+        key="dl_sweep",
+    )
+
+    st.markdown("### Heatmap")
+    col_x, col_y = st.columns(2)
+    x_param = col_x.selectbox("X param", options=params, index=0)
+    y_options: list[str | None] = [None, *[name for name in params if name != x_param]]
+    y_param = col_y.selectbox(
+        "Y param",
+        options=y_options,
+        index=1 if len(y_options) > 1 else 0,
+        format_func=lambda name: "(none)" if name is None else name,
+    )
+    fixed: dict[str, Any] = {}
+    others = [name for name in params if name not in (x_param, y_param)]
+    if others:
+        fixed_cols = st.columns(len(others))
+        for column, name in zip(fixed_cols, others, strict=True):
+            values = sorted(results[f"{PARAM_PREFIX}{name}"].dropna().unique().tolist())
+            fixed[name] = column.selectbox(f"Hold {name} at", options=values, key=f"sweep_fixed_{name}")
+    pivot = loader.sweep_pivot(results, x=x_param, y=y_param, metric=metric, fixed=fixed)
+    st.plotly_chart(
+        charts.sweep_heatmap(
+            pivot, metric=metric, x_label=x_param, y_label=y_param, theme=prefs.reporting.plot_theme
+        ),
+        use_container_width=True,
+    )
+
+    ok = ranked[ranked["status"] == "ok"]
+    top_n = int(
+        st.number_input("Equity overlay: top N", min_value=1, max_value=20, value=min(5, max(len(ok), 1)))
+    )
+    overlay: dict[str, pd.DataFrame] = {}
+    for _, row in ok.head(top_n).iterrows():
+        run_dir = Path(str(row["run_dir"]))
+        if not (run_dir / "metrics.json").is_file():
+            continue
+        bundle = _load_run_cached(str(run_dir), loader.run_dir_mtime_ns(run_dir))
+        label = " ".join(f"{name}={row[PARAM_PREFIX + name]}" for name in params)
+        overlay[label] = bundle["equity_curve"]
+    if overlay:
+        st.plotly_chart(charts.equity_overlay(overlay, normalize=True), use_container_width=True)
+    if len(ok) > 1:
+        st.caption(
+            "The best of many combinations is an optimistic estimate; confirm it on data the sweep did not see."
+        )
+
+
 def main() -> None:
     st.title("LambdaClass - Backtest Review")
     root = _repo_root()
@@ -726,13 +842,15 @@ def main() -> None:
     else:
         st.sidebar.info("report.html not generated for this run.")
 
-    tab_run, tab_compare, tab_chain, tab_strategy, tab_earnings = st.tabs(
-        ["Run", "Compare", "Chain", "Strategy", "Earnings"]
+    tab_run, tab_compare, tab_sweeps, tab_chain, tab_strategy, tab_earnings = st.tabs(
+        ["Run", "Compare", "Sweeps", "Chain", "Strategy", "Earnings"]
     )
     with tab_run:
         _render_run_tab(active, bars, indicator_overlays)
     with tab_compare:
         _render_compare_tab(bundles, runs_root)
+    with tab_sweeps:
+        _render_sweeps_tab(runs_root, selected_strategies, prefs)
     with tab_chain:
         _render_chain_tab(active, bars, prefs, root)
     with tab_strategy:

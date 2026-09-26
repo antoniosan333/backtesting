@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import importlib.util
 import json
 import re
 import subprocess
@@ -9,21 +8,33 @@ import time
 from collections.abc import Callable
 from datetime import UTC, date, datetime
 from pathlib import Path
-from typing import TypeVar
+from typing import Any, TypeVar
 
 import pandas as pd
 import typer
 
-from lambdaclass.config import DEFAULT_PREFERENCES, Preferences
+from lambdaclass.config import DEFAULT_PREFERENCES, Preferences, compute_config_hash
 from lambdaclass.data_adapters.optionsdx_normalize import NormalizeOptions, run_normalize
 from lambdaclass.data_adapters.yfinance_adapter import YFinanceAdapter
 from lambdaclass.earnings.calendar import normalize_earnings_frame
 from lambdaclass.reporting import dashboard as reporting_dashboard
+from lambdaclass.runs.layout import PARAM_PREFIX, SWEEPS_DIRNAME
 from lambdaclass.runs.runner import RunInputs, execute_run, load_run_inputs
+from lambdaclass.runs.sweep import (
+    SweepContext,
+    SweepError,
+    SweepSpec,
+    expand_grid,
+    parse_grid,
+    rank_results,
+    run_sweep,
+    write_sweep_summary,
+)
 from lambdaclass.state import load_json, save_json
 from lambdaclass.storage.duckdb_store import DuckDBStore
 from lambdaclass.strategies.base import Strategy
-from lambdaclass.strategies.params import ParamError, apply_params, parse_assignments
+from lambdaclass.strategies.loader import StrategyLoadError, load_strategy_class
+from lambdaclass.strategies.params import ParamError, apply_params, parse_assignments, resolve_params
 from lambdaclass.strategies.scaffolder import scaffold_strategy
 from lambdaclass.symbols import validate_symbol
 
@@ -128,18 +139,10 @@ def _find_strategy_file(strategies_dir: Path, strategy_name: str) -> Path:
 
 
 def _load_strategy_class(path: Path) -> type[Strategy]:
-    module_name = f"strategy_{path.stem}"
-    spec = importlib.util.spec_from_file_location(module_name, path)
-    if spec is None or spec.loader is None:
-        raise typer.BadParameter(f"Could not load strategy module from {path}")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    strategy_cls = getattr(module, "StrategyImpl", None)
-    if strategy_cls is None:
-        raise typer.BadParameter("Strategy file must define StrategyImpl class")
-    if not isinstance(strategy_cls, type) or not issubclass(strategy_cls, Strategy):
-        raise typer.BadParameter("StrategyImpl must inherit lambdaclass.strategies.base.Strategy")
-    return strategy_cls
+    try:
+        return load_strategy_class(path)
+    except StrategyLoadError as exc:
+        raise typer.BadParameter(str(exc)) from exc
 
 
 def _instantiate_strategy(strategy_cls: type[Strategy]) -> Strategy:
@@ -391,6 +394,150 @@ def run_strategy(
             err=True,
         )
         if fail_on_rejected_orders:
+            raise typer.Exit(code=1)
+
+
+@app.command("sweep")
+def sweep_strategy(
+    strategy_name: str,
+    grid: list[str] | None = typer.Option(
+        None,
+        "--grid",
+        help="Param values as key=a,b,c or key=start:stop:step (inclusive); repeatable",
+    ),
+    param: list[str] | None = typer.Option(
+        None,
+        "--param",
+        help="Fixed param override for every combination, key=value; repeatable",
+    ),
+    symbol: str = typer.Option("SPY", help="Underlying symbol with fetched data"),
+    start: str | None = typer.Option(None, help="Optional YYYY-MM-DD start override"),
+    end: str | None = typer.Option(None, help="Optional YYYY-MM-DD end override"),
+    options_source: str | None = typer.Option(
+        None,
+        help="Options chain: yfinance or optionsdx. Default: [defaults].options_chain_source",
+    ),
+    metric: str = typer.Option("sharpe", help="Metric used to rank combinations"),
+    minimize: bool = typer.Option(False, help="Rank ascending (lower metric is better)"),
+    top: int = typer.Option(5, min=0, help="Combinations to print after the sweep"),
+    jobs: int = typer.Option(1, min=1, help="Worker processes (each loads the data once)"),
+    max_combos: int = typer.Option(200, min=1, help="Refuse grids with more combinations than this"),
+    html: bool = typer.Option(False, help="Write report.html for every combination"),
+    fail_fast: bool = typer.Option(False, help="Stop at the first failing combination and exit non-zero"),
+) -> None:
+    """Run a strategy over every combination of --grid values."""
+    root = _repo_root()
+    symbol = _validate_symbol(symbol)
+    prefs = _load_preferences(root)
+    strategies_dir = root / prefs.paths.strategies_dir
+    strategy_path = _find_strategy_file(strategies_dir, _validate_strategy_name(strategy_name))
+    strategy_cls = _load_strategy_class(strategy_path)
+    probe = _instantiate_strategy(strategy_cls)
+    try:
+        fixed_raw = parse_assignments(param or [])
+        resolved = resolve_params(probe.params, fixed_raw)
+        parsed_grid = parse_grid(grid or [])
+        overlap = sorted(set(parsed_grid) & set(fixed_raw))
+        if overlap:
+            raise SweepError(f"{', '.join(overlap)} given in both --grid and --param")
+        combos = expand_grid(parsed_grid, probe.params, max_combos=max_combos)
+    except (ParamError, SweepError) as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    fixed_overrides = {key: resolved[key] for key in fixed_raw}
+
+    inputs = _load_inputs(root, prefs, symbol=symbol, start=start, end=end, options_source=options_source)
+    now = datetime.now(tz=UTC)
+    stamp = now.strftime("%Y%m%dT%H%M%SZ")
+    git_sha = _git_short_sha(root)
+    strategy_runs = root / prefs.paths.runs_dir / now.strftime("%Y-%m") / probe.name
+    manifest: dict[str, Any] = {
+        "strategy": probe.name,
+        "strategy_file": str(strategy_path.relative_to(root.resolve()))
+        if root.resolve() in strategy_path.parents
+        else strategy_path.name,
+        "symbol": inputs.symbol,
+        "start": start,
+        "end": end,
+        "options_source": inputs.options_source,
+        "grid": parsed_grid,
+        "fixed_params": fixed_overrides,
+        "combinations": len(combos),
+        "metric": metric,
+        "minimize": minimize,
+        "git_sha": git_sha,
+        "created_at": now.isoformat(),
+        "preferences": prefs.model_dump(mode="json"),
+    }
+    sweep_id = f"{stamp}-{git_sha}-{compute_config_hash(manifest | {'created_at': None})}"
+    manifest["sweep_id"] = sweep_id
+    optionsdx_root = Path(prefs.optionsdx.output_dir)
+    if not optionsdx_root.is_absolute():
+        optionsdx_root = (root / optionsdx_root).resolve()
+    spec = SweepSpec(
+        strategy_path=strategy_path,
+        data_dir=root / prefs.paths.data_dir,
+        optionsdx_root=optionsdx_root,
+        symbol=inputs.symbol,
+        start=start,
+        end=end,
+        options_source=inputs.options_source,
+        preferences_payload=prefs.model_dump(mode="json"),
+        strategy_runs_dir=strategy_runs,
+        run_prefix=f"{stamp}-{git_sha}",
+        sweep_id=sweep_id,
+        fixed_params=fixed_overrides,
+        write_html=html,
+    )
+    context = SweepContext(spec=spec, strategy_cls=strategy_cls, inputs=inputs, preferences=prefs)
+    typer.echo(
+        f"Sweep {sweep_id}: {len(combos)} combination(s) of {probe.name} on {inputs.symbol}, jobs={jobs}"
+    )
+    completed = 0
+
+    def report(row: dict[str, Any]) -> None:
+        nonlocal completed
+        completed += 1
+        label = " ".join(
+            f"{key.removeprefix(PARAM_PREFIX)}={value}"
+            for key, value in row.items()
+            if key.startswith(PARAM_PREFIX)
+        )
+        if row["status"] == "ok":
+            value = row.get(metric)
+            shown = f"{value:.4f}" if isinstance(value, int | float) else "n/a"
+            typer.echo(f"[{completed}/{len(combos)}] {label} {metric}={shown}")
+        else:
+            typer.secho(
+                f"[{completed}/{len(combos)}] {label} failed: {row['error']}", fg=typer.colors.RED, err=True
+            )
+
+    results = run_sweep(context, combos, jobs=jobs, fail_fast=fail_fast, on_result=report)
+    sweep_dir = write_sweep_summary(strategy_runs / SWEEPS_DIRNAME / sweep_id, results, manifest)
+    typer.echo(f"Sweep summary: {sweep_dir / 'sweep.parquet'}")
+
+    ranked = rank_results(results, metric, minimize=minimize)
+    if metric not in results.columns:
+        typer.secho(
+            f"Warning: metric '{metric}' not found in results; nothing ranked.",
+            fg=typer.colors.YELLOW,
+            err=True,
+        )
+    elif top and not ranked.empty:
+        param_columns = [column for column in ranked.columns if column.startswith(PARAM_PREFIX)]
+        typer.echo(f"Top {min(top, len(ranked))} by {metric} ({'lowest' if minimize else 'highest'} first):")
+        for _, row in ranked.head(top).iterrows():
+            label = " ".join(f"{column.removeprefix(PARAM_PREFIX)}={row[column]}" for column in param_columns)
+            typer.echo(f"  {metric}={row[metric]:.4f} {label} -> {row['run_dir']}")
+    if len(ranked) > 1:
+        typer.echo("Note: the best of many combinations is an optimistic estimate; confirm it out of sample.")
+    failed = int((results["status"] == "error").sum()) if not results.empty else 0
+    if failed:
+        typer.secho(
+            f"Warning: {failed} combination(s) failed; see {sweep_dir / 'sweep.parquet'}",
+            fg=typer.colors.YELLOW,
+            err=True,
+        )
+        if fail_fast:
             raise typer.Exit(code=1)
 
 

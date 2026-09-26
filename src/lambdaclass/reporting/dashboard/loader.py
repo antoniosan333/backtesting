@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import tomllib
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -21,6 +22,7 @@ from lambdaclass.data_adapters.optionsdx_chain_loader import (
     load_normalized_optionsdx_chain,
 )
 from lambdaclass.reporting import metrics as reporting_metrics
+from lambdaclass.runs.layout import PARAM_PREFIX, SWEEP_MANIFEST_FILE, SWEEP_RESULTS_FILE, SWEEPS_DIRNAME
 from lambdaclass.symbols import validate_symbol
 
 ARTIFACT_NAMES = ("metrics.json", "equity.parquet", "trades.csv", "config.snapshot.toml")
@@ -283,6 +285,90 @@ def aggregate_metrics(runs_root: Path, run_dirs: list[Path] | None = None) -> pd
         + ["run_dir"]
     )
     return pd.DataFrame(rows)[columns]
+
+
+@dataclass(frozen=True)
+class SweepBundle:
+    sweep_dir: Path
+    sweep_id: str
+    strategy: str
+    manifest: dict[str, Any]
+    results: pd.DataFrame
+
+
+def list_sweeps(runs_root: Path) -> list[Path]:
+    """Sweep directories under ``runs/<YYYY-MM>/<strategy>/_sweeps/<sweep_id>/``, newest first."""
+    runs_root = Path(runs_root)
+    if not runs_root.is_dir():
+        return []
+    results = runs_root.glob(f"*/*/{SWEEPS_DIRNAME}/*/{SWEEP_RESULTS_FILE}")
+    return [path.parent for path in sorted(results, key=lambda path: path.stat().st_mtime, reverse=True)]
+
+
+def load_sweep(sweep_dir: Path) -> SweepBundle:
+    sweep_dir = Path(sweep_dir)
+    manifest_path = sweep_dir / SWEEP_MANIFEST_FILE
+    manifest: dict[str, Any] = {}
+    if manifest_path.is_file():
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            manifest = {}
+    results_path = sweep_dir / SWEEP_RESULTS_FILE
+    results = pd.read_parquet(results_path) if results_path.is_file() else pd.DataFrame()
+    return SweepBundle(
+        sweep_dir=sweep_dir,
+        sweep_id=sweep_dir.name,
+        strategy=str(manifest.get("strategy") or sweep_dir.parent.parent.name),
+        manifest=manifest,
+        results=results,
+    )
+
+
+def sweep_param_names(results: pd.DataFrame) -> list[str]:
+    """Swept param names (without the column prefix), in grid order."""
+    return [
+        column.removeprefix(PARAM_PREFIX) for column in results.columns if column.startswith(PARAM_PREFIX)
+    ]
+
+
+def sweep_metric_names(results: pd.DataFrame) -> list[str]:
+    """Numeric result columns other than params and the combination index."""
+    excluded = {"combo"}
+    return [
+        column
+        for column in results.columns
+        if column not in excluded
+        and not column.startswith(PARAM_PREFIX)
+        and pd.api.types.is_numeric_dtype(results[column])
+        and not pd.api.types.is_bool_dtype(results[column])
+    ]
+
+
+def sweep_pivot(
+    results: pd.DataFrame,
+    *,
+    x: str,
+    y: str | None,
+    metric: str,
+    fixed: Mapping[str, Any] | None = None,
+) -> pd.DataFrame:
+    """Metric table over one or two swept params, holding the other params at ``fixed``.
+
+    With ``y=None`` the result has a single row named after ``metric``.
+    """
+    if results.empty or "status" not in results.columns or metric not in results.columns:
+        return pd.DataFrame()
+    frame = results[results["status"] == "ok"]
+    for name, value in (fixed or {}).items():
+        frame = frame[frame[f"{PARAM_PREFIX}{name}"] == value]
+    if frame.empty:
+        return pd.DataFrame()
+    x_column = f"{PARAM_PREFIX}{x}"
+    if y is None:
+        series = frame.groupby(x_column, sort=True)[metric].mean()
+        return series.to_frame(metric).T
+    return frame.pivot_table(index=f"{PARAM_PREFIX}{y}", columns=x_column, values=metric, aggfunc="mean")
 
 
 def num_trades(trades: pd.DataFrame) -> int:

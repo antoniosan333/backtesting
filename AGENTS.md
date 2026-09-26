@@ -14,6 +14,7 @@ Stock and options backtesting: Typer CLI, TOML preferences, local Parquet + Duck
 | OptionsDX normalized | `data/optionsdx/normalized/<SYMBOL>/<YYYY>/<MM>/` |
 | OptionsDX reports | `data/optionsdx/reports/files/`, `data/optionsdx/reports/runs/` |
 | Backtest runs | `runs/<YYYY-MM>/<strategy>/<run_id>/` |
+| Sweep summaries | `runs/<YYYY-MM>/<strategy>/_sweeps/<sweep_id>/` (`sweep.parquet`, `sweep.json`) |
 | App state JSON | `state/` (e.g. `fetch_markers.json`, `optionsdx_normalize_state.json`) |
 | Raw OptionsDX | `zRawData/optionsdx/*.txt` |
 | Tests | `tests/` (fixtures `tests/fixtures/optionsdx/`) |
@@ -33,6 +34,7 @@ All via `lambdaclass` (Python ≥ 3.11, `pip install -e ".[dev]"`).
 | `fetch-earnings SYMBOL [--csv PATH]` | Earnings calendar → `data/earnings/<SYMBOL>.parquet` (yfinance or CSV); `state/earnings_fetch_markers.json` |
 | `new-strategy NAME` | Scaffold under current month folder |
 | `run STRATEGY [--symbol] [--start/--end] [--options-source …] [--param key=value …] [--fail-on-rejected-orders]` | Backtest; `--options-source yfinance` or `optionsdx` (default: `[defaults].options_chain_source`); `--param` overrides `StrategyImpl.params` |
+| `sweep STRATEGY --grid key=a,b [--grid key=start:stop:step] [--param …] [--metric] [--jobs N] [--max-combos]` | Run every grid combination as a normal run + write a sweep summary ([ADR-0009](docs/decisions/0009-parameter-sweeps.md)) |
 | `list-runs [--limit]` | Latest runs from `metrics.json` paths |
 | `compare STRATEGY [--limit]` | Compare metrics for a strategy |
 | `dashboard [--host] [--port] [--headless/--no-headless]` | Streamlit read-only review UI (`streamlit run` the packaged `reporting/dashboard/app.py`) |

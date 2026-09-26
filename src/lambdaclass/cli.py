@@ -320,6 +320,7 @@ def run_strategy(
         earnings=earnings,
         bars=bars,
         iv_by_date=average_iv_from_option_trades(run_result.option_trades),
+        expected_moves=run_result.expected_moves,
     )
     if not events.empty:
         events.to_parquet(run_dir / "events.parquet", index=False)

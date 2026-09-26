@@ -25,3 +25,8 @@ max_open_positions = 5
 input_dir = "zRawData/optionsdx"
 output_dir = "data/optionsdx/normalized"
 reports_dir = "data/optionsdx/reports"
+
+[expected_move]
+skew_factor = 0.85
+max_spread_pct = 0.5
+horizons_dte = [0, 7, 30]

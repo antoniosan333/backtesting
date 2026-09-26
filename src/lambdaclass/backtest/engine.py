@@ -51,6 +51,15 @@ def _stock_commission(shares: int, prefs: Preferences) -> float:
     )
 
 
+def _select_expected_move_horizons(frame: pd.DataFrame, horizons: list[int]) -> pd.DataFrame:
+    selected: list[pd.Series] = []
+    for horizon in horizons:
+        candidates = frame[frame["dte"] >= float(horizon)]
+        row = candidates.sort_values("dte").iloc[0] if not candidates.empty else frame.sort_values("dte").iloc[-1]
+        selected.append(row)
+    return pd.DataFrame(selected).drop_duplicates(subset=["expiry"]).reset_index(drop=True)
+
+
 def _chain_row_for_contract(chain: pd.DataFrame | None, contract_symbol: str) -> pd.Series | None:
     if chain is None or chain.empty:
         return None
@@ -223,12 +232,20 @@ def run_backtest(
     for date_key, chain in chain_by_date.items():
         if date_key not in closes_by_date:
             continue
-        frame = calculate_expected_moves(chain, closes_by_date[date_key])
+        frame = calculate_expected_moves(
+            chain,
+            closes_by_date[date_key],
+            skew_factor=preferences.expected_move.skew_factor,
+            max_spread_pct=preferences.expected_move.max_spread_pct,
+        )
         if frame.empty:
             continue
-        frame.insert(0, "asof", date_key)
         expected_by_date[date_key] = frame
-        expected_frames.append(frame)
+        artifact_frame = _select_expected_move_horizons(
+            frame, preferences.expected_move.horizons_dte
+        )
+        artifact_frame.insert(0, "asof", date_key)
+        expected_frames.append(artifact_frame)
     cash = float(preferences.defaults.starting_capital)
     position = 0
     open_options: dict[str, OpenOption] = {}

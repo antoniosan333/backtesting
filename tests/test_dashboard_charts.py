@@ -67,6 +67,24 @@ def test_price_with_signals_empty_bars() -> None:
     assert len(fig.data) == 0
 
 
+def test_price_with_signals_includes_expected_move_band() -> None:
+    moves = pd.DataFrame(
+        [
+            {"asof": "2024-01-02", "spot": 100.0, "tos": 3.0, "dte": 7.0},
+            {"asof": "2024-01-02", "spot": 100.0, "tos": 5.0, "dte": 30.0},
+        ]
+    )
+
+    fig = charts.price_with_signals(_bars(2), expected_moves=moves)
+
+    assert [trace.name for trace in fig.data[-2:]] == [
+        "Expected move upper",
+        "Expected move lower",
+    ]
+    assert list(fig.data[-2].y) == [103.0]
+    assert list(fig.data[-1].y) == [97.0]
+
+
 def test_equity_overlay_skips_empty_runs() -> None:
     runs = {
         "alpha": _equity(),

@@ -39,4 +39,4 @@ Copy [0000-template.md](0000-template.md) and fill in sections.
 | [0004](0004-options-strategy-builder.md) | Options strategy lab (chain-only legs, BSM + Greeks, Strategy tab) |
 | [0005](0005-options-engine-accounting.md) | Options ledger, MTM, and expiry settlement in `run_backtest` |
 | [0006](0006-earnings-calendar.md) | Earnings calendar fetch, context fields, event metrics, Earnings tab |
-| [0007](0007-expected-move.md) | Expected move from historical option chains (Proposed) |
+| [0007](0007-expected-move.md) | Expected move from historical option chains |

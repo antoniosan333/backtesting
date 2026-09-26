@@ -82,12 +82,33 @@ def _nearest_earnings(entry_date: str, earnings: pd.DataFrame) -> dict[str, Any]
     return best
 
 
+def _expected_move_for_event(
+    expected_moves: pd.DataFrame | None,
+    entry_date: str,
+    earnings_date: str,
+) -> pd.Series | None:
+    if expected_moves is None or expected_moves.empty:
+        return None
+    required = {"asof", "expiry", "straddle", "iv_1sd"}
+    if not required.issubset(expected_moves.columns):
+        return None
+    moves = expected_moves.copy()
+    moves["asof"] = moves["asof"].astype(str).str[:10]
+    moves["expiry"] = moves["expiry"].astype(str).str[:10]
+    matches = moves[
+        (moves["asof"] == str(entry_date)[:10])
+        & (moves["expiry"] >= str(earnings_date)[:10])
+    ].sort_values("expiry")
+    return None if matches.empty else matches.iloc[0]
+
+
 def compute_earnings_events(
     *,
     option_trades: pd.DataFrame,
     earnings: pd.DataFrame,
     bars: pd.DataFrame,
     iv_by_date: dict[str, float] | None = None,
+    expected_moves: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     """Build one row per earnings-adjacent option structure.
 
@@ -105,20 +126,22 @@ def compute_earnings_events(
         spot_entry = _spot_on(bars, entry)
         spot_exit = _spot_on(bars, exit_d)
         realized = abs(spot_exit - spot_entry) / spot_entry if spot_entry > 0 else 0.0
-        # Implied move from debit/credit of structure at entry: |net premium| / (100 * spot)
-        # For a 1-lot straddle, premium_sum at open is qty*100*mid sum; use absolute open premium / spot
         open_prem = sum(float(r.get("premium") or 0.0) for r in struct["opens"])
-        # Long pays positive premium sum; implied move ≈ abs(open_prem) / (100 * spot) when 1 lot
-        # Better: abs(open_prem) / spot for dollar premium already ×100
-        implied = abs(open_prem) / spot_entry if spot_entry > 0 else 0.0
-        # For multi-leg, open_prem is already dollar notional; divide by spot for pct of underlying
-        # 1-lot ATM straddle ~ premium_dollars / spot  e.g. 800/100 = 8.0 meaning 8% — correct as pct points
-        implied_move_pct = implied  # already fraction if we use open_prem/spot? 800/100=8 → need /100
-        # open_prem is dollars (qty*100*mid). Fraction of spot: open_prem / (spot * 100) for 1 share equiv
-        # Standard: implied move % ≈ straddle_price / spot. straddle_price = open_prem/100 for 1 lot.
+        # Preserve the legacy structure-premium fallback for runs without chain-derived moves.
         lots_proxy = max(sum(abs(int(r.get("quantity") or 0)) for r in struct["opens"]) / 2.0, 1.0)
         straddle_px = abs(open_prem) / (100.0 * lots_proxy)
         implied_move_pct = straddle_px / spot_entry if spot_entry > 0 else 0.0
+        implied_move_1sd_pct = implied_move_pct * 1.25
+        expected = _expected_move_for_event(
+            expected_moves, entry, earn["earnings_date"]
+        )
+        if expected is not None and spot_entry > 0:
+            straddle = pd.to_numeric(expected.get("straddle"), errors="coerce")
+            one_sd = pd.to_numeric(expected.get("iv_1sd"), errors="coerce")
+            if pd.notna(straddle):
+                implied_move_pct = float(straddle) / spot_entry
+            if pd.notna(one_sd):
+                implied_move_1sd_pct = float(one_sd) / spot_entry
 
         iv_entry = float(iv_by_date.get(entry, 0.0))
         iv_exit = float(iv_by_date.get(exit_d, 0.0))
@@ -138,6 +161,7 @@ def compute_earnings_events(
                 "spot_entry": spot_entry,
                 "spot_exit": spot_exit,
                 "implied_move_pct": implied_move_pct,
+                "implied_move_1sd_pct": implied_move_1sd_pct,
                 "realized_move_pct": realized,
                 "iv_entry": iv_entry,
                 "iv_exit": iv_exit,
@@ -156,6 +180,7 @@ def compute_earnings_events(
                 "spot_entry",
                 "spot_exit",
                 "implied_move_pct",
+                "implied_move_1sd_pct",
                 "realized_move_pct",
                 "iv_entry",
                 "iv_exit",

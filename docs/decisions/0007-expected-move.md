@@ -1,6 +1,6 @@
 # ADR-0007: Expected move from historical option chains
 
-**Status:** Proposed
+**Status:** Accepted
 
 ## Context
 

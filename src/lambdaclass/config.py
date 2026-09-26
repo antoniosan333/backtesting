@@ -20,6 +20,8 @@ def _format_toml_value(value: Any) -> str:
         return f"{value:.10g}"
     if isinstance(value, int):
         return str(value)
+    if isinstance(value, list):
+        return "[" + ", ".join(_format_toml_value(item) for item in value) + "]"
     raise TypeError(f"Unsupported TOML value type: {type(value)}")
 
 
@@ -111,12 +113,19 @@ class OptionsDXNormalizeConfig(BaseModel):
     reports_dir: str = "data/optionsdx/reports"
 
 
+class ExpectedMoveConfig(BaseModel):
+    skew_factor: float = Field(default=0.85, gt=0.0)
+    max_spread_pct: float = Field(default=0.5, gt=0.0)
+    horizons_dte: list[int] = Field(default_factory=lambda: [0, 7, 30])
+
+
 class Preferences(BaseModel):
     defaults: DefaultsConfig = Field(default_factory=DefaultsConfig)
     paths: PathsConfig = Field(default_factory=PathsConfig)
     reporting: ReportingConfig = Field(default_factory=ReportingConfig)
     risk: RiskConfig = Field(default_factory=RiskConfig)
     optionsdx: OptionsDXNormalizeConfig = Field(default_factory=OptionsDXNormalizeConfig)
+    expected_move: ExpectedMoveConfig = Field(default_factory=ExpectedMoveConfig)
 
     @classmethod
     def load(cls, path: Path, env_prefix: str = "LAMBDACLASS__") -> "Preferences":
@@ -161,6 +170,7 @@ def snapshot_preferences(
             "reporting": preferences.reporting.model_dump(),
             "risk": preferences.risk.model_dump(),
             "optionsdx": preferences.optionsdx.model_dump(),
+            "expected_move": preferences.expected_move.model_dump(),
             "strategy_params": {key: str(value) for key, value in redacted_strategy_params.items()},
             "cli_overrides": {key: str(value) for key, value in redacted_cli_overrides.items()},
         }

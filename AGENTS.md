@@ -32,7 +32,7 @@ All via `lambdaclass` (Python ≥ 3.11, `pip install -e ".[dev]"`).
 | `fetch SYMBOL --start YYYY-MM-DD [--end]` | yfinance → Parquet append + dedupe; updates `state/fetch_markers.json` |
 | `fetch-earnings SYMBOL [--csv PATH]` | Earnings calendar → `data/earnings/<SYMBOL>.parquet` (yfinance or CSV); `state/earnings_fetch_markers.json` |
 | `new-strategy NAME` | Scaffold under current month folder |
-| `run STRATEGY [--symbol] [--start/--end] [--options-source …] [--fail-on-rejected-orders]` | Backtest; `--options-source yfinance` or `optionsdx` (default: `[defaults].options_chain_source`) |
+| `run STRATEGY [--symbol] [--start/--end] [--options-source …] [--param key=value …] [--fail-on-rejected-orders]` | Backtest; `--options-source yfinance` or `optionsdx` (default: `[defaults].options_chain_source`); `--param` overrides `StrategyImpl.params` |
 | `list-runs [--limit]` | Latest runs from `metrics.json` paths |
 | `compare STRATEGY [--limit]` | Compare metrics for a strategy |
 | `dashboard [--host] [--port] [--headless/--no-headless]` | Streamlit read-only review UI (`streamlit run` the packaged `reporting/dashboard/app.py`) |
@@ -63,7 +63,7 @@ All via `lambdaclass` (Python ≥ 3.11, `pip install -e ".[dev]"`).
 | OptionsDX pipeline | `src/lambdaclass/data_adapters/AGENTS.md` |
 | Parquet I/O | `src/lambdaclass/storage/AGENTS.md` |
 | Strategy API | `src/lambdaclass/strategies/base.py` |
-| Run loop + outputs | `src/lambdaclass/backtest/engine.py` |
+| Run loop + outputs | `src/lambdaclass/backtest/engine.py`; orchestration (load inputs, write run dir) in `src/lambdaclass/runs/runner.py` |
 | BSM / Greeks / mid quotes | `src/lambdaclass/options/pricing.py` |
 | Option presets / payoff curves | `src/lambdaclass/options/presets.py`, `src/lambdaclass/options/payoff.py` |
 | Earnings calendar helpers | `src/lambdaclass/earnings/calendar.py` (`EarningsCalendar`) |

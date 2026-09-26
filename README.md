@@ -24,6 +24,8 @@ lambdaclass run demo
 
 Options chain source (for strategies that use `context.options_chain`): set `[defaults] options_chain_source = "optionsdx"` after running `normalize-optionsdx`, or pass `lambdaclass run STRATEGY --options-source optionsdx`. Default remains `yfinance` (`data/options/<SYMBOL>.parquet` from `fetch`).
 
+Override strategy params without editing the file: `lambdaclass run STRATEGY --param lots=2 --param width_inner=7.5`. Keys must exist in `StrategyImpl.params`, and values are converted to the type of the default (int, float, bool, or str). Each distinct param set gets its own config hash and run directory.
+
 Strategy files are executable Python. Only run strategies you trust; treat
 `strategies/` as application code rather than an untrusted data directory.
 

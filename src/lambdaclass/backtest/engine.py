@@ -9,6 +9,7 @@ import pandas as pd
 
 from lambdaclass.config import Preferences
 from lambdaclass.earnings.calendar import context_fields
+from lambdaclass.options.expected_move import expected_moves as calculate_expected_moves
 from lambdaclass.options.pricing import (
     black_scholes_price,
     intrinsic_value,
@@ -37,6 +38,7 @@ class RunResult:
     final_position: int
     option_trades: pd.DataFrame = field(default_factory=pd.DataFrame)
     rejected_orders: pd.DataFrame = field(default_factory=pd.DataFrame)
+    expected_moves: pd.DataFrame = field(default_factory=pd.DataFrame)
 
 
 def _option_commission(contracts: int, prefs: Preferences) -> float:
@@ -212,6 +214,21 @@ def run_backtest(
         else {}
     )
     earnings_df = earnings if earnings is not None else pd.DataFrame()
+    closes_by_date = {
+        str(row["date"]): float(row["close"])
+        for _, row in bars_sorted.iterrows()
+    }
+    expected_by_date: dict[str, pd.DataFrame] = {}
+    expected_frames: list[pd.DataFrame] = []
+    for date_key, chain in chain_by_date.items():
+        if date_key not in closes_by_date:
+            continue
+        frame = calculate_expected_moves(chain, closes_by_date[date_key])
+        if frame.empty:
+            continue
+        frame.insert(0, "asof", date_key)
+        expected_by_date[date_key] = frame
+        expected_frames.append(frame)
     cash = float(preferences.defaults.starting_capital)
     position = 0
     open_options: dict[str, OpenOption] = {}
@@ -258,6 +275,7 @@ def run_backtest(
             cash=cash,
             position=position,
             options_chain=chain,
+            expected_moves=expected_by_date.get(date_key),
             days_to_next_earnings=earn_ctx["days_to_next_earnings"],
             days_since_last_earnings=earn_ctx["days_since_last_earnings"],
             next_earnings_date=earn_ctx["next_earnings_date"],
@@ -353,6 +371,7 @@ def run_backtest(
         final_position=position,
         option_trades=pd.DataFrame(option_trades) if option_trades else pd.DataFrame(),
         rejected_orders=pd.DataFrame(rejected_orders) if rejected_orders else pd.DataFrame(),
+        expected_moves=pd.concat(expected_frames, ignore_index=True) if expected_frames else pd.DataFrame(),
     )
 
 
@@ -371,4 +390,6 @@ def write_run_outputs(run_result: RunResult, run_dir: Path) -> tuple[Path, Path]
         run_result.option_trades.to_csv(run_dir / "option_trades.csv", index=False)
     if not run_result.rejected_orders.empty:
         run_result.rejected_orders.to_csv(run_dir / "rejected_orders.csv", index=False)
+    if not run_result.expected_moves.empty:
+        run_result.expected_moves.to_parquet(run_dir / "expected_moves.parquet", index=False)
     return trades_path, equity_path

@@ -18,6 +18,8 @@ CHAIN_COLUMNS = [
     "expiry",
     "asof",
     "symbol",
+    "underlying_last",
+    "dte",
 ]
 
 
@@ -99,6 +101,8 @@ def load_normalized_optionsdx_chain(
             "expiry": raw["expire_date"].astype(str),
             "asof": raw["_asof"],
             "symbol": sym,
+            "underlying_last": pd.to_numeric(raw["underlying_last"], errors="coerce"),
+            "dte": pd.to_numeric(raw["dte"], errors="coerce"),
         }
     )
     return out.sort_values(["asof", "contract_symbol"]).reset_index(drop=True)

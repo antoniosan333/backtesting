@@ -216,6 +216,45 @@ def test_build_earnings_events_measures_the_reaction_session() -> None:
     )
 
 
+def test_symbol_vote_overrides_low_confidence_gap_guesses() -> None:
+    # Three clear AMC reactions, then a quiet report whose larger gap happens to be on the report day.
+    gaps = {
+        "2024-10-24": 0.08,
+        "2025-01-30": -0.07,
+        "2025-04-24": 0.06,
+        "2025-07-23": 0.012,
+        "2025-07-24": 0.008,
+    }
+    bars = _synthetic_bars("2024-06-03", "2025-09-30", gaps=gaps)
+    calendar = pd.DataFrame(
+        {
+            "symbol": ["AAA"] * 5,
+            "earnings_date": ["2024-10-23", "2025-01-29", "2025-04-23", "2025-07-23", "2026-10-22"],
+            "timing": ["unknown"] * 4 + ["AMC"],
+        }
+    )
+    events = build_earnings_events(calendar, {"AAA": bars}).set_index("earnings_date")
+
+    quiet = events.loc["2025-07-23"]
+    assert quiet["inferred_timing"] == "BMO" and quiet["timing_confidence"] < 0.9
+    assert quiet["timing"] == "AMC" and quiet["timing_source"] == "inferred_symbol"
+    assert quiet["reaction_date"] == "2025-07-24"
+    assert set(events["symbol_timing"]) == {"AMC"}
+    assert events.loc["2024-10-23", "timing_source"] == "inferred_gap"
+
+
+def test_symbol_vote_needs_a_clear_majority() -> None:
+    bars = _synthetic_bars("2024-06-03", "2025-06-30", gaps={"2024-10-23": 0.06, "2025-01-30": -0.06})
+    calendar = pd.DataFrame(
+        {"symbol": ["AAA"] * 2, "earnings_date": ["2024-10-23", "2025-01-29"], "timing": ["unknown"] * 2}
+    )
+    events = build_earnings_events(calendar, {"AAA": bars})
+
+    assert events["symbol_timing"].isna().all()
+    assert events["timing"].tolist() == ["BMO", "AMC"]
+    assert set(events["timing_source"]) == {"inferred_gap"}
+
+
 def test_weekend_report_reacts_on_next_session() -> None:
     bars = _synthetic_bars("2024-12-02", "2025-04-30", gaps={"2025-03-03": 0.05})
     calendar = pd.DataFrame({"symbol": ["BRK-B"], "earnings_date": ["2025-03-01"], "timing": ["unknown"]})
@@ -255,6 +294,43 @@ def test_summary_and_timing_backfill() -> None:
     filled = apply_event_timing(earnings, events)
     assert filled["timing"].tolist() == ["AMC", "AMC", "AMC"]
     assert filled["timing_source"].tolist() == ["inferred_gap"] * 3
+
+
+def test_apply_event_timing_refreshes_inferences_but_keeps_vendor_rows() -> None:
+    earnings = pd.DataFrame(
+        {
+            "symbol": ["AAA", "AAA", "AAA"],
+            "earnings_date": ["2025-01-29", "2025-04-23", "2025-07-23"],
+            "timing": ["BMO", "AMC", "BMO"],
+            "timing_source": ["inferred_gap", "vendor", None],
+        }
+    )
+    events = pd.DataFrame(
+        {
+            "symbol": ["AAA"] * 3,
+            "earnings_date": ["2025-01-29", "2025-04-23", "2025-07-23"],
+            "timing": ["AMC", "BMO", "AMC"],
+            "timing_source": ["inferred_symbol", "inferred_gap", "inferred_gap"],
+        }
+    )
+    updated = apply_event_timing(earnings, events)
+
+    assert updated["timing"].tolist() == ["AMC", "AMC", "BMO"]
+    assert updated["timing_source"].tolist() == ["inferred_symbol", "vendor", "vendor"]
+
+
+def test_batch_readers_use_one_query(tmp_path: Path) -> None:
+    store = DuckDBStore(tmp_path)
+    store.write_bars("AAA", _synthetic_bars("2025-01-02", "2025-01-08", gaps={}))
+    store.write_bars("BBB", _synthetic_bars("2025-01-06", "2025-01-08", gaps={}).drop(columns="dividends"))
+    store.write_earnings("AAA", pd.DataFrame({"earnings_date": ["2025-01-29"], "timing": ["AMC"]}))
+
+    bars = store.read_bars_many(["AAA", "BBB", "MISSING"])
+    assert sorted(bars) == ["AAA", "BBB"]
+    assert bars["BBB"]["date"].tolist() == ["2025-01-06", "2025-01-07", "2025-01-08"]
+    assert bars["BBB"]["dividends"].tolist() == [0.0, 0.0, 0.0]
+    assert store.read_bars_many(["MISSING"]) == {}
+    assert store.read_earnings_many(["AAA", "BBB"])["symbol"].tolist() == ["AAA"]
 
 
 def test_with_retry_retries_then_raises() -> None:

@@ -15,7 +15,7 @@ Root: `Preferences.paths.data_dir` (default `data/`).
 | `read_earnings_calendar(start, end, symbols)` | glob over the calendar cache (`union_by_name`) | — |
 | `write_earnings_events` / `read_earnings_events` | `data/earnings/events/<name>.parquet` | replaced on write |
 
-`bar_date_range(symbol)` returns stored `(min, max)` bar dates. Dataset `name`s must match `^[a-z][a-z0-9_]{0,63}$` (they become file names). See [ADR-0010](../../../docs/decisions/0010-weekly-options-earnings-universe.md).
+`bar_date_range(symbol)` returns stored `(min, max)` bar dates. `read_bars_many` / `read_earnings_many` read many symbols in one DuckDB query; prefer them in loops, since each `duckdb.connect()` costs several milliseconds. Dataset `name`s must match `^[a-z][a-z0-9_]{0,63}$` (they become file names). See [ADR-0010](../../../docs/decisions/0010-weekly-options-earnings-universe.md).
 
 Bar columns: `date`, `open`, `high`, `low`, `close` (split-adjusted, not dividend-adjusted), `volume`, `dividends` (cash per share on the ex-date). `read_bars` backfills a missing `dividends` column with `0.0` and sets `bars.attrs["dividends_backfilled"] = True`.
 

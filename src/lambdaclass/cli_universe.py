@@ -291,7 +291,8 @@ def build_events(
         raise typer.BadParameter(
             "No cached earnings for the universe; run `lambdaclass universe fetch-earnings`."
         )
-    bars_by_symbol = {symbol: store.read_bars(symbol) for symbol in sorted(set(calendar["symbol"]))}
+    reporting_symbols = sorted(set(calendar["symbol"]))
+    bars_by_symbol = store.read_bars_many(reporting_symbols)
     events = build_earnings_events(calendar, bars_by_symbol)
     if events.empty:
         raise typer.BadParameter(
@@ -300,12 +301,14 @@ def build_events(
     events_path = store.write_earnings_events(UNIVERSE_NAME, events)
     summary = summarize_events_by_symbol(events, min_events=min_events)
     summary_path = store.write_earnings_events(SUMMARY_NAME, summary)
-    for symbol, frame in events.groupby("symbol"):
-        earnings = store.read_earnings(str(symbol))
-        updated = apply_event_timing(earnings, frame)
-        if not updated.equals(earnings):
-            store.write_earnings(str(symbol), updated)
-    no_bars = sum(1 for frame in bars_by_symbol.values() if frame.empty)
+    earnings = store.read_earnings_many(sorted(set(events["symbol"])))
+    updated = apply_event_timing(earnings, events)
+    if not updated.empty:
+        before = earnings.reindex(columns=["timing", "timing_source"]).fillna("")
+        changed = updated[["timing", "timing_source"]].fillna("").ne(before).any(axis=1)
+        for symbol in updated.loc[changed, "symbol"].unique():
+            store.write_earnings(str(symbol), updated[updated["symbol"] == symbol])
+    no_bars = len(reporting_symbols) - len(bars_by_symbol)
     typer.echo(
         f"Events: {len(events)} across {events['symbol'].nunique()} symbols → {events_path}\n"
         f"Summary: {len(summary)} symbols with >= {min_events} events → {summary_path}\n"

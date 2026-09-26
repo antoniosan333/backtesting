@@ -44,8 +44,17 @@ skipped).
 - Nasdaq gives no time of day for past reports, so timing is inferred from the
   larger overnight gap (`timing_source = inferred_gap`, with a
   `timing_confidence` share). Vendor timing wins when known and is used to
-  report how often the inference agrees. Inferred timings are copied back into
-  the per-symbol earnings files with `timing_source = inferred_gap`.
+  report how often the inference agrees.
+- Companies rarely change their slot, so a per-symbol vote (`symbol_timing`)
+  weighs every report. Vendor timings, including upcoming ones, count 0.5, and
+  each gap guess counts `confidence - 0.5`. When one side holds at least 20% of
+  the net weight, the vote replaces gap guesses with confidence below 0.9
+  (`timing_source = inferred_symbol`). On two years of data
+  this raised agreement with vendor timing from 90% to about 95%. It also fixed
+  quiet large caps such as AAPL, MSFT, GS and KO, whose earnings gaps look like
+  noise.
+- Inferred timings are copied back into the per-symbol earnings files. A rerun
+  replaces earlier inferences but never vendor timings.
 - Per-event fields: gap, reaction, and intraday returns, absolute move, move in
   units of the prior 20-day daily volatility, volume ratio, 5-day run-up, 1/5/20
   day post-reaction drift, EPS actual/estimate/surprise, and `beat`. Bars are

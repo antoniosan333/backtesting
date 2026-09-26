@@ -77,6 +77,27 @@ class DuckDBStore:
             bars["dividends"] = pd.to_numeric(bars["dividends"], errors="coerce").fillna(0.0)
         return bars
 
+    def read_bars_many(self, symbols: Sequence[str]) -> dict[str, pd.DataFrame]:
+        """Bars for many symbols in one query; symbols without stored bars are omitted."""
+        frame = self._read_many([self._stock_path(symbol) for symbol in symbols], order_by="symbol, date")
+        if frame.empty:
+            return {}
+        if "dividends" not in frame.columns:
+            frame["dividends"] = 0.0
+        frame["dividends"] = pd.to_numeric(frame["dividends"], errors="coerce").fillna(0.0)
+        return {
+            str(symbol): group.reset_index(drop=True) for symbol, group in frame.groupby("symbol", sort=False)
+        }
+
+    def _read_many(self, paths: Sequence[Path], *, order_by: str) -> pd.DataFrame:
+        existing = [str(path) for path in paths if path.exists()]
+        if not existing:
+            return pd.DataFrame()
+        with duckdb.connect() as con:
+            return con.execute(
+                f"SELECT * FROM read_parquet(?, union_by_name = true) ORDER BY {order_by}", [existing]
+            ).df()
+
     def bar_date_range(self, symbol: str) -> tuple[str, str] | None:
         """First and last stored bar date for ``symbol``, or ``None`` when nothing is stored."""
         path = self._stock_path(symbol)
@@ -224,6 +245,12 @@ class DuckDBStore:
     def read_earnings_events(self, name: str) -> pd.DataFrame:
         path = self._events_path(name)
         return pd.read_parquet(path) if path.exists() else pd.DataFrame()
+
+    def read_earnings_many(self, symbols: Sequence[str]) -> pd.DataFrame:
+        """Stored per-symbol earnings rows for many symbols in one query."""
+        return self._read_many(
+            [self._earnings_path(symbol) for symbol in symbols], order_by="symbol, earnings_date"
+        )
 
     def read_earnings(
         self,

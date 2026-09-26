@@ -9,8 +9,12 @@ missing, so it is inferred from which overnight gap is larger:
 * AMC otherwise
 
 ``timing_confidence`` is the larger gap's share of both gaps (0.5 = coin flip,
-1.0 = only one gap moved). Inferred timing uses the reaction itself, so treat it
-as a labelling aid for research, not something a live strategy knew in advance.
+1.0 = only one gap moved). Companies rarely change their reporting slot, so a
+per-symbol vote (``symbol_timing``) overrides gap guesses below
+``CONSENSUS_OVERRIDE_BELOW`` confidence (``timing_source = inferred_symbol``);
+this matters for low-volatility names whose earnings gaps look like noise.
+Inferred timing uses the reaction itself, so treat it as a labelling aid for
+research, not something a live strategy knew in advance.
 """
 
 from __future__ import annotations
@@ -27,6 +31,9 @@ from lambdaclass.earnings.history import KNOWN_TIMINGS
 DRIFT_HORIZONS = (1, 5, 20)
 RUNUP_DAYS = 5
 VOL_WINDOW = 20
+CONSENSUS_MIN_SHARE = 0.2
+CONSENSUS_OVERRIDE_BELOW = 0.9
+VENDOR_VOTE_WEIGHT = 0.5
 EVENT_COLUMNS = [
     "symbol",
     "earnings_date",
@@ -35,6 +42,7 @@ EVENT_COLUMNS = [
     "vendor_timing",
     "inferred_timing",
     "timing_confidence",
+    "symbol_timing",
     "pre_date",
     "reaction_date",
     "pre_close",
@@ -111,26 +119,89 @@ def infer_timing(bars: BarSeries, index: int) -> tuple[str | None, float]:
     return ("BMO" if report_gap >= next_gap else "AMC"), float(confidence)
 
 
-def _event_row(bars: BarSeries, calendar_row: Mapping[str, Any]) -> dict[str, Any] | None:
+@dataclass(frozen=True)
+class _Placement:
+    """Where one calendar row lands on the bars, with vendor and gap-inferred timing."""
+
+    earnings_date: str
+    index: int
+    trading_day: bool
+    vendor_timing: str | None
+    inferred: str | None
+    confidence: float
+
+
+def _place(bars: BarSeries, calendar_row: Mapping[str, Any]) -> _Placement:
     earnings_date = str(calendar_row["earnings_date"])[:10]
     index = int(np.searchsorted(bars.dates, earnings_date, side="left"))
-    if index >= len(bars):
-        return None
+    trading_day = index < len(bars) and bars.dates[index] == earnings_date
     vendor = str(calendar_row.get("timing") or "unknown")
-    vendor_timing = vendor if vendor in KNOWN_TIMINGS else None
-    trading_day = bars.dates[index] == earnings_date
     inferred, confidence = infer_timing(bars, index) if trading_day else (None, float("nan"))
-    if not trading_day:
+    return _Placement(
+        earnings_date=earnings_date,
+        index=index,
+        trading_day=trading_day,
+        vendor_timing=vendor if vendor in KNOWN_TIMINGS else None,
+        inferred=inferred,
+        confidence=confidence,
+    )
+
+
+def symbol_timing_vote(placements: list[_Placement]) -> str | None:
+    """A symbol's habitual BMO/AMC slot from a confidence-weighted vote over its reports.
+
+    Vendor timings (including upcoming reports) count as full-strength votes; each
+    inferred timing counts ``confidence - 0.5``. Returns ``None`` when the net vote
+    is under ``CONSENSUS_MIN_SHARE`` of the total weight.
+    """
+    net = total = 0.0
+    for placement in placements:
+        if placement.vendor_timing is not None:
+            timing, weight = placement.vendor_timing, VENDOR_VOTE_WEIGHT
+        elif placement.inferred is not None:
+            timing, weight = placement.inferred, placement.confidence - 0.5
+        else:
+            continue
+        net += weight if timing == "BMO" else -weight
+        total += weight
+    if total <= 0 or abs(net) / total < CONSENSUS_MIN_SHARE:
+        return None
+    return "BMO" if net > 0 else "AMC"
+
+
+def _resolve_timing(placement: _Placement, symbol_timing: str | None) -> tuple[str, str, int] | None:
+    """``(timing, timing_source, reaction_index)`` for one placement, or ``None`` if undecidable."""
+    index = placement.index
+    if not placement.trading_day:
         # Reported on a weekend/holiday: the next session is the first to react either way.
-        timing, timing_source, reaction = vendor_timing or "BMO", "non_trading_day", index
-    elif vendor_timing is not None:
-        timing, timing_source = vendor_timing, "vendor"
-        reaction = index if vendor_timing == "BMO" else index + 1
-    elif inferred is not None:
-        timing, timing_source = inferred, "inferred_gap"
-        reaction = index if inferred == "BMO" else index + 1
+        return placement.vendor_timing or "BMO", "non_trading_day", index
+    if placement.vendor_timing is not None:
+        timing, source = placement.vendor_timing, "vendor"
+    elif (
+        symbol_timing is not None
+        and symbol_timing != placement.inferred
+        and (placement.inferred is None or placement.confidence < CONSENSUS_OVERRIDE_BELOW)
+    ):
+        timing, source = symbol_timing, "inferred_symbol"
+    elif placement.inferred is not None:
+        timing, source = placement.inferred, "inferred_gap"
     else:
         return None
+    return timing, source, index if timing == "BMO" else index + 1
+
+
+def _event_row(
+    bars: BarSeries,
+    calendar_row: Mapping[str, Any],
+    placement: _Placement,
+    symbol_timing: str | None,
+) -> dict[str, Any] | None:
+    if placement.index >= len(bars):
+        return None
+    resolved = _resolve_timing(placement, symbol_timing)
+    if resolved is None:
+        return None
+    timing, timing_source, reaction = resolved
     pre = reaction - 1
     if pre < 0 or reaction >= len(bars):
         return None
@@ -148,12 +219,13 @@ def _event_row(bars: BarSeries, calendar_row: Mapping[str, Any]) -> dict[str, An
     eps_estimate = float(calendar_row.get("eps_estimate", np.nan))
     row: dict[str, Any] = {
         "symbol": str(calendar_row["symbol"]),
-        "earnings_date": earnings_date,
+        "earnings_date": placement.earnings_date,
         "timing": timing,
         "timing_source": timing_source,
-        "vendor_timing": vendor_timing,
-        "inferred_timing": inferred,
-        "timing_confidence": confidence,
+        "vendor_timing": placement.vendor_timing,
+        "inferred_timing": placement.inferred,
+        "timing_confidence": placement.confidence,
+        "symbol_timing": symbol_timing,
         "pre_date": bars.dates[pre],
         "reaction_date": bars.dates[reaction],
         "pre_close": pre_close,
@@ -196,8 +268,11 @@ def build_earnings_events(calendar: pd.DataFrame, bars_by_symbol: Mapping[str, p
             if frame is None or frame.empty:
                 continue
             bars = BarSeries.from_frame(frame)
-            for calendar_row in group.sort_values("earnings_date").to_dict("records"):
-                event = _event_row(bars, calendar_row)
+            calendar_rows = group.sort_values("earnings_date").to_dict("records")
+            placements = [_place(bars, calendar_row) for calendar_row in calendar_rows]
+            symbol_timing = symbol_timing_vote(placements)
+            for calendar_row, placement in zip(calendar_rows, placements, strict=True):
+                event = _event_row(bars, calendar_row, placement, symbol_timing)
                 if event is not None:
                     rows.append(event)
     events = pd.DataFrame(rows, columns=EVENT_COLUMNS)
@@ -206,24 +281,38 @@ def build_earnings_events(calendar: pd.DataFrame, bars_by_symbol: Mapping[str, p
 
 
 def apply_event_timing(earnings: pd.DataFrame, events: pd.DataFrame) -> pd.DataFrame:
-    """Fill ``unknown`` timing in a per-symbol earnings frame from built events."""
+    """Copy event timing into earnings rows whose timing did not come from a vendor.
+
+    Rows without ``timing_source`` (older files) count as vendor-timed when their
+    timing is already BMO/AMC. Rerunning replaces earlier inferences.
+    """
     if earnings.empty or events.empty:
         return earnings
     resolved = events[events["timing_source"] != "vendor"].set_index(["symbol", "earnings_date"])
     if resolved.empty:
         return earnings
     frame = earnings.copy()
-    if "timing_source" not in frame.columns:
-        frame["timing_source"] = "none"
+    vendor_default = pd.Series(
+        np.where(frame["timing"].isin(KNOWN_TIMINGS), "vendor", "none"), index=frame.index
+    )
+    if "timing_source" in frame.columns:
+        frame["timing_source"] = frame["timing_source"].fillna(vendor_default)
+    else:
+        frame["timing_source"] = vendor_default
     keys = pd.MultiIndex.from_arrays(
         [frame["symbol"].astype(str), frame["earnings_date"].astype(str).str[:10]]
     )
     timing = pd.Series(resolved["timing"].reindex(keys).to_numpy(), index=frame.index)
     source = pd.Series(resolved["timing_source"].reindex(keys).to_numpy(), index=frame.index)
-    fill = frame["timing"].eq("unknown") & timing.notna()
+    fill = frame["timing_source"].ne("vendor") & timing.notna()
     frame.loc[fill, "timing"] = timing[fill]
     frame.loc[fill, "timing_source"] = source[fill]
     return frame
+
+
+def _beat_rate(beats: pd.Series) -> float:
+    known = beats.dropna()
+    return float(known.astype(float).mean()) if len(known) else float("nan")
 
 
 def summarize_events_by_symbol(events: pd.DataFrame, *, min_events: int = 1) -> pd.DataFrame:
@@ -262,7 +351,7 @@ def summarize_events_by_symbol(events: pd.DataFrame, *, min_events: int = 1) -> 
             "mean_abs_sigma": grouped["move_sigma"].agg(lambda values: float(values.abs().mean())),
             "mean_drift_5d": grouped["drift_5d"].mean(),
             "mean_drift_20d": grouped["drift_20d"].mean(),
-            "beat_rate": grouped["beat"].agg(lambda values: float(values.dropna().astype(float).mean())),
+            "beat_rate": grouped["beat"].agg(_beat_rate),
             "bmo_share": grouped["timing"].agg(lambda values: float((values == "BMO").mean())),
         }
     ).reset_index()

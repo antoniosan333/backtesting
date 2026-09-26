@@ -11,3 +11,5 @@ def test_preferences_round_trip(tmp_path: Path) -> None:
     loaded = Preferences.load(path)
     assert loaded.defaults.starting_capital == 250_000
     assert loaded.defaults.data_adapter == "yfinance"
+    assert loaded.expected_move.skew_factor == 0.85
+    assert loaded.expected_move.horizons_dte == [0, 7, 30]

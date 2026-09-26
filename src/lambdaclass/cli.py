@@ -299,7 +299,7 @@ def run_strategy(
     ),
     fail_on_rejected_orders: bool = typer.Option(
         False,
-        help="Exit non-zero if any option order could not be priced from the chain",
+        help="Exit non-zero if any stock or option order was rejected",
     ),
 ) -> None:
     root = _repo_root()
@@ -397,7 +397,7 @@ def run_strategy(
             f"{reason}={count}" for reason, count in rejected["reason"].value_counts().items()
         )
         typer.secho(
-            f"Warning: {len(rejected)} option order(s) rejected ({by_reason}). "
+            f"Warning: {len(rejected)} order(s) rejected ({by_reason}). "
             f"See {run_dir / 'rejected_orders.csv'}",
             fg=typer.colors.YELLOW,
             err=True,

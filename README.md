@@ -29,15 +29,17 @@ Strategy files are executable Python. Only run strategies you trust; treat
 
 ## Backtest assumptions
 
-- Decisions observe a completed bar and fill at that bar's close or option-chain mid. This same-bar model can introduce look-ahead bias; use results for research rather than execution-quality simulation.
+- By default (`[defaults].fill_timing = "same_close"`) decisions observe a completed bar and fill at that bar's close or option-chain mid, which can introduce look-ahead bias. Set `fill_timing = "next_open"` to fill stock at the next bar's open and options at the next bar's chain mid.
+- Stock is long-only unless `[risk].allow_short_stock = true`; shorts pay `[risk].short_borrow_rate` (annual, per calendar day) and dividends. A sell with nothing held is rejected as `no_position`.
 - Multi-leg option decisions are all-or-none. `reduce_only` close legs cannot create a reverse position.
 - Stock and option risk limits come from `[risk]`; cash cannot go negative unless `[defaults].allow_negative_cash = true`.
 - `fetch --end` is inclusive. Bars store split-adjusted, dividend-unadjusted `close` plus a `dividends` column; cash dividends are credited to held shares on the ex-date. Bars fetched before dividend capture load with zero dividends (re-run `fetch` to fill them).
-- Options use European-style cash settlement at intrinsic value. Early exercise, assignment, borrow costs, and portfolio margin are not modeled.
+- Options use European-style cash settlement at intrinsic value. Early exercise, assignment, and portfolio margin are not modeled.
 - Missing marks after a valid fill fall back to Black–Scholes.
 
-See [ADR-0005](docs/decisions/0005-options-engine-accounting.md) and
-[ADR-0007](docs/decisions/0007-atomic-option-fills-and-risk-limits.md).
+See [ADR-0005](docs/decisions/0005-options-engine-accounting.md),
+[ADR-0007](docs/decisions/0007-atomic-option-fills-and-risk-limits.md), and
+[ADR-0008](docs/decisions/0008-fill-timing-dividends-and-short-stock.md).
 
 ## Dashboard
 

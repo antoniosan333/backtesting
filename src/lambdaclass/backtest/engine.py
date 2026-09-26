@@ -23,6 +23,7 @@ from lambdaclass.strategies.base import (
     OptionLeg,
     Strategy,
     StrategyContext,
+    StrategyDecision,
 )
 
 
@@ -298,6 +299,90 @@ def _execute_option_structure(
     return cash
 
 
+def _stock_rejection(date_key: str, action: str, quantity: int, reason: str) -> dict[str, Any]:
+    return {
+        "date": date_key,
+        "instrument": "stock",
+        "action": action,
+        "quantity": quantity,
+        "reason": reason,
+    }
+
+
+def _execute_stock_order(
+    *,
+    action: str,
+    quantity: int,
+    price: float,
+    cash: float,
+    position: int,
+    preferences: Preferences,
+    date_key: str,
+    trades: list[dict[str, Any]],
+    rejected_orders: list[dict[str, Any]],
+) -> tuple[float, int]:
+    """Fill a stock order at ``price``; return updated ``(cash, position)``.
+
+    Without ``risk.allow_short_stock`` a sell is capped at the held quantity. With it,
+    sells may take the position below zero and buys cover before going long.
+    """
+    if quantity <= 0 or action not in ("buy", "sell"):
+        return cash, position
+    if action == "sell" and not preferences.risk.allow_short_stock:
+        if position <= 0:
+            rejected_orders.append(_stock_rejection(date_key, action, quantity, "no_position"))
+            return cash, position
+        quantity = min(quantity, position)
+
+    signed = quantity if action == "buy" else -quantity
+    new_position = position + signed
+    commission = _stock_commission(quantity, preferences)
+    slippage = price * (preferences.defaults.slippage_bps / 10_000.0) * quantity
+    new_cash = cash - signed * price - commission - slippage
+
+    reason: str | None = None
+    if abs(new_position) > abs(position):
+        current_equity = cash + position * price
+        if abs(new_position) * price > current_equity * preferences.risk.max_position_pct:
+            reason = "risk_max_position_pct"
+    if reason is None and action == "buy" and not preferences.defaults.allow_negative_cash and new_cash < 0.0:
+        reason = "insufficient_cash"
+    if reason is not None:
+        rejected_orders.append(_stock_rejection(date_key, action, quantity, reason))
+        return cash, position
+
+    trades.append(
+        {
+            "date": date_key,
+            "action": action,
+            "quantity": quantity,
+            "price": price,
+            "cash_after": new_cash,
+        }
+    )
+    return new_cash, new_position
+
+
+def _cash_flow_row(
+    date_key: str, action: str, quantity: int, per_share: float, cash: float
+) -> dict[str, Any]:
+    return {
+        "date": date_key,
+        "action": action,
+        "quantity": quantity,
+        "price": per_share,
+        "cash_after": cash,
+    }
+
+
+def _stock_fill_price(row: pd.Series, *, at_open: bool) -> float:
+    close = float(row["close"])
+    if not at_open:
+        return close
+    open_price = numeric_value(row.get("open"))
+    return open_price if open_price > 0.0 else close
+
+
 def run_backtest(
     strategy: Strategy,
     bars: pd.DataFrame,
@@ -316,8 +401,40 @@ def run_backtest(
     rejected_orders: list[dict[str, Any]] = []
     equity_records: list[dict[str, Any]] = []
     r = float(preferences.defaults.risk_free_rate)
+    next_open = preferences.defaults.fill_timing == "next_open"
+    borrow_rate = float(preferences.risk.short_borrow_rate)
     last_fills: tuple[dict[str, Any], ...] = ()
     last_rejections: tuple[dict[str, Any], ...] = ()
+    pending: StrategyDecision | None = None
+    prev_date: date | None = None
+    prev_close = 0.0
+
+    def execute(
+        decision: StrategyDecision, row: pd.Series, chain: pd.DataFrame | None, date_key: str
+    ) -> None:
+        nonlocal cash, position
+        cash, position = _execute_stock_order(
+            action=decision.action,
+            quantity=int(decision.quantity),
+            price=_stock_fill_price(row, at_open=next_open),
+            cash=cash,
+            position=position,
+            preferences=preferences,
+            date_key=date_key,
+            trades=trades,
+            rejected_orders=rejected_orders,
+        )
+        if decision.option_legs:
+            cash = _execute_option_structure(
+                legs=decision.option_legs,
+                chain=chain,
+                open_options=open_options,
+                cash=cash,
+                preferences=preferences,
+                date_key=date_key,
+                option_trades=option_trades,
+                rejected_orders=rejected_orders,
+            )
 
     for _, row in bars_sorted.iterrows():
         fills_before_bar = len(option_trades)
@@ -351,18 +468,23 @@ def run_backtest(
                 }
             )
 
+        if position < 0 and borrow_rate > 0.0 and prev_date is not None:
+            days = max((bar_date - prev_date).days, 0)
+            fee_per_share = prev_close * borrow_rate * days / 365.0
+            if fee_per_share > 0.0:
+                cash += position * fee_per_share
+                trades.append(_cash_flow_row(date_key, "borrow_fee", position, fee_per_share, cash))
+
         dividend = numeric_value(row.get("dividends"))
         if dividend and position:
             cash += position * dividend
-            trades.append(
-                {
-                    "date": date_key,
-                    "action": "dividend",
-                    "quantity": position,
-                    "price": dividend,
-                    "cash_after": cash,
-                }
-            )
+            trades.append(_cash_flow_row(date_key, "dividend", position, dividend, cash))
+
+        if pending is not None:
+            execute(pending, row, chain, date_key)
+            pending = None
+            last_fills = tuple(option_trades[fills_before_bar:])
+            last_rejections = tuple(rejected_orders[rejections_before_bar:])
 
         context = StrategyContext(
             row=row,
@@ -378,66 +500,13 @@ def run_backtest(
             last_rejections=last_rejections,
         )
         decision = strategy.on_bar(context)
-        qty = int(decision.quantity)
-        if decision.action == "buy" and qty > 0:
-            total_cost = (price * qty) + _stock_commission(qty, preferences)
-            slippage = price * (preferences.defaults.slippage_bps / 10_000.0) * qty
-            outlay = total_cost + slippage
-            current_equity = cash + position * price
-            projected_notional = (position + qty) * price
-            reason: str | None = None
-            if projected_notional > current_equity * preferences.risk.max_position_pct:
-                reason = "risk_max_position_pct"
-            elif not preferences.defaults.allow_negative_cash and outlay > cash:
-                reason = "insufficient_cash"
-            if reason is not None:
-                rejected_orders.append(
-                    {
-                        "date": date_key,
-                        "instrument": "stock",
-                        "quantity": qty,
-                        "reason": reason,
-                    }
-                )
-            else:
-                cash -= outlay
-                position += qty
-                trades.append(
-                    {
-                        "date": date_key,
-                        "action": "buy",
-                        "quantity": qty,
-                        "price": price,
-                        "cash_after": cash,
-                    }
-                )
-        elif decision.action == "sell" and qty > 0 and position > 0:
-            executed = min(qty, position)
-            proceeds = (price * executed) - _stock_commission(executed, preferences)
-            slippage = price * (preferences.defaults.slippage_bps / 10_000.0) * executed
-            cash += proceeds - slippage
-            position -= executed
-            trades.append(
-                {
-                    "date": date_key,
-                    "action": "sell",
-                    "quantity": executed,
-                    "price": price,
-                    "cash_after": cash,
-                }
-            )
-
-        if decision.option_legs:
-            cash = _execute_option_structure(
-                legs=decision.option_legs,
-                chain=chain,
-                open_options=open_options,
-                cash=cash,
-                preferences=preferences,
-                date_key=date_key,
-                option_trades=option_trades,
-                rejected_orders=rejected_orders,
-            )
+        if next_open:
+            has_order = decision.action in ("buy", "sell") and int(decision.quantity) > 0
+            pending = decision if has_order or decision.option_legs else None
+            last_fills = ()
+            last_rejections = ()
+        else:
+            execute(decision, row, chain, date_key)
 
         options_mtm = 0.0
         for sym, pos in open_options.items():
@@ -462,8 +531,19 @@ def run_backtest(
                 "equity": equity,
             }
         )
-        last_fills = tuple(option_trades[fills_before_bar:])
-        last_rejections = tuple(rejected_orders[rejections_before_bar:])
+        if not next_open:
+            last_fills = tuple(option_trades[fills_before_bar:])
+            last_rejections = tuple(rejected_orders[rejections_before_bar:])
+        prev_date = bar_date
+        prev_close = price
+
+    if pending is not None:
+        final_key = str(bars_sorted["date"].iloc[-1])
+        if pending.action in ("buy", "sell") and int(pending.quantity) > 0:
+            rejected_orders.append(
+                _stock_rejection(final_key, pending.action, int(pending.quantity), "no_next_bar")
+            )
+        rejected_orders.extend(_rejection_row(final_key, leg, "no_next_bar") for leg in pending.option_legs)
 
     return RunResult(
         trades=pd.DataFrame(trades),

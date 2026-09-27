@@ -78,6 +78,7 @@ def price_with_signals(
     bars: pd.DataFrame,
     trades: pd.DataFrame | None = None,
     indicators: Mapping[str, pd.Series] | None = None,
+    expected_moves: pd.DataFrame | None = None,
     *,
     theme: str = "plotly_dark",
     title: str = "Price with Signals",
@@ -107,6 +108,38 @@ def price_with_signals(
             if series is None or len(series) == 0:
                 continue
             fig.add_trace(go.Scatter(x=bars["date"], y=series, mode="lines", name=name))
+
+    if (
+        expected_moves is not None
+        and not expected_moves.empty
+        and {"asof", "spot", "tos", "dte"}.issubset(expected_moves.columns)
+    ):
+        front = (
+            expected_moves.sort_values(["asof", "dte"])
+            .drop_duplicates(subset=["asof"], keep="first")
+            .copy()
+        )
+        front["upper"] = front["spot"] + front["tos"]
+        front["lower"] = front["spot"] - front["tos"]
+        fig.add_trace(
+            go.Scatter(
+                x=front["asof"],
+                y=front["upper"],
+                mode="lines",
+                line={"width": 1, "dash": "dot"},
+                name="Expected move upper",
+            )
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=front["asof"],
+                y=front["lower"],
+                mode="lines",
+                line={"width": 1, "dash": "dot"},
+                fill="tonexty",
+                name="Expected move lower",
+            )
+        )
 
     if trades is not None and not trades.empty and {"date", "action", "price"}.issubset(trades.columns):
         buys = trades[trades["action"].str.lower() == "buy"]

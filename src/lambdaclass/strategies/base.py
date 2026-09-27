@@ -37,6 +37,7 @@ class StrategyContext:
     cash: float
     position: int
     options_chain: pd.DataFrame | None = None
+    expected_moves: pd.DataFrame | None = None
     days_to_next_earnings: int | None = None
     days_since_last_earnings: int | None = None
     next_earnings_date: str | None = None

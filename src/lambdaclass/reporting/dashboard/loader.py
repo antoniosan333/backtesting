@@ -25,7 +25,13 @@ from lambdaclass.reporting import metrics as reporting_metrics
 from lambdaclass.runs.layout import PARAM_PREFIX, SWEEP_MANIFEST_FILE, SWEEP_RESULTS_FILE, SWEEPS_DIRNAME
 from lambdaclass.symbols import validate_symbol
 
-ARTIFACT_NAMES = ("metrics.json", "equity.parquet", "trades.csv", "config.snapshot.toml")
+ARTIFACT_NAMES = (
+    "metrics.json",
+    "equity.parquet",
+    "trades.csv",
+    "expected_moves.parquet",
+    "config.snapshot.toml",
+)
 
 
 @dataclass(frozen=True)
@@ -37,6 +43,7 @@ class RunBundle:
     equity_curve: pd.DataFrame
     trades: pd.DataFrame
     option_trades: pd.DataFrame
+    expected_moves: pd.DataFrame
     snapshot: dict[str, Any]
     symbol: str
     start: str
@@ -127,6 +134,7 @@ def load_run(run_dir: Path) -> RunBundle:
     equity_path = run_dir / "equity.parquet"
     trades_path = run_dir / "trades.csv"
     option_trades_path = run_dir / "option_trades.csv"
+    expected_moves_path = run_dir / "expected_moves.parquet"
     snapshot_path = run_dir / "config.snapshot.toml"
 
     metrics: dict[str, float] = json.loads(metrics_path.read_text(encoding="utf-8"))
@@ -143,6 +151,11 @@ def load_run(run_dir: Path) -> RunBundle:
             option_trades = _empty_option_trades()
     else:
         option_trades = _empty_option_trades()
+    expected_moves = (
+        pd.read_parquet(expected_moves_path)
+        if expected_moves_path.is_file()
+        else pd.DataFrame()
+    )
     snapshot = _load_snapshot(snapshot_path)
 
     cli_overrides = snapshot.get("cli_overrides", {}) if isinstance(snapshot, dict) else {}
@@ -174,6 +187,7 @@ def load_run(run_dir: Path) -> RunBundle:
         equity_curve=equity_curve,
         trades=trades,
         option_trades=option_trades,
+        expected_moves=expected_moves,
         snapshot=snapshot,
         symbol=symbol.upper(),
         start=start,

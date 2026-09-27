@@ -113,12 +113,33 @@ def _long_straddle_implied_move(opens: list[Mapping[str, Any]], spot: float) -> 
     return straddle_price / spot
 
 
+def _expected_move_for_event(
+    expected_moves: pd.DataFrame | None,
+    entry_date: str,
+    earnings_date: str,
+) -> pd.Series | None:
+    if expected_moves is None or expected_moves.empty:
+        return None
+    required = {"asof", "expiry", "straddle", "iv_1sd"}
+    if not required.issubset(expected_moves.columns):
+        return None
+    moves = expected_moves.copy()
+    moves["asof"] = moves["asof"].astype(str).str[:10]
+    moves["expiry"] = moves["expiry"].astype(str).str[:10]
+    matches = moves[
+        (moves["asof"] == str(entry_date)[:10])
+        & (moves["expiry"] >= str(earnings_date)[:10])
+    ].sort_values("expiry")
+    return None if matches.empty else matches.iloc[0]
+
+
 def compute_earnings_events(
     *,
     option_trades: pd.DataFrame,
     earnings: pd.DataFrame,
     bars: pd.DataFrame,
     iv_by_date: dict[str, float] | None = None,
+    expected_moves: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     """Build one row per earnings-adjacent option structure.
 
@@ -158,6 +179,7 @@ def compute_earnings_events(
                 "spot_entry": spot_entry,
                 "spot_exit": spot_exit,
                 "implied_move_pct": implied_move_pct,
+                "implied_move_1sd_pct": implied_move_1sd_pct,
                 "realized_move_pct": realized,
                 "iv_entry": iv_entry,
                 "iv_exit": iv_exit,
@@ -176,6 +198,7 @@ def compute_earnings_events(
                 "spot_entry",
                 "spot_exit",
                 "implied_move_pct",
+                "implied_move_1sd_pct",
                 "realized_move_pct",
                 "iv_entry",
                 "iv_exit",

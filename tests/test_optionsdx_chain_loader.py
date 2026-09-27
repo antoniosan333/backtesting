@@ -31,6 +31,8 @@ def test_load_chain_from_normalized_matches_engine_columns(tmp_path: Path) -> No
     assert spy["asof"].eq("2012-01-03").all()
     assert spy["symbol"].eq("SPY").all()
     assert spy["contract_symbol"].astype(str).str.len().gt(0).all()
+    assert spy["underlying_last"].gt(0).all()
+    assert spy["dte"].ge(0).all()
 
     btc = load_normalized_optionsdx_chain(out, "BTC", ["2021-06-01"])
     assert not btc.empty

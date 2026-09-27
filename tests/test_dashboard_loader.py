@@ -92,6 +92,7 @@ def test_load_run_returns_bundle_with_snapshot_fields(tmp_path: Path) -> None:
     assert len(bundle.equity_curve) == 2
     assert len(bundle.trades) == 2
     assert bundle.option_trades.empty
+    assert bundle.expected_moves.empty
 
 
 def test_load_run_uses_snapshot_symbol_and_treats_legacy_none_bounds_as_absent(

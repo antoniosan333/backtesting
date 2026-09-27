@@ -55,6 +55,7 @@ def _load_run_cached(run_dir_str: str, mtime_ns: int) -> dict[str, Any]:
         "equity_curve": bundle.equity_curve,
         "trades": bundle.trades,
         "option_trades": bundle.option_trades,
+        "expected_moves": bundle.expected_moves,
         "snapshot": bundle.snapshot,
         "symbol": bundle.symbol,
         "start": bundle.start,
@@ -145,7 +146,12 @@ def _render_run_tab(
 
     st.markdown("### Price + Signals")
     st.plotly_chart(
-        charts.price_with_signals(bars, trades_df, indicator_overlays),
+        charts.price_with_signals(
+            bars,
+            trades_df,
+            indicator_overlays,
+            bundle_dict.get("expected_moves"),
+        ),
         use_container_width=True,
     )
 
@@ -242,6 +248,35 @@ def _render_chain_tab(
             f"under {normalized_root}."
         )
         return
+
+    spot = loader.chain_spot_estimate(bars, chosen_date)
+    moves = expected_moves(
+        chain,
+        spot,
+        skew_factor=prefs.expected_move.skew_factor,
+        max_spread_pct=prefs.expected_move.max_spread_pct,
+    )
+    st.markdown("### Expected move by expiration")
+    if moves.empty:
+        st.caption("No expiration could be calculated.")
+    else:
+        st.dataframe(
+            moves[
+                [
+                    "expiry",
+                    "dte",
+                    "spot",
+                    "atm_strike",
+                    "atm_iv",
+                    "straddle",
+                    "iv_1sd",
+                    "tos",
+                    "weighted",
+                    "quality",
+                ]
+            ],
+            use_container_width=True,
+        )
 
     sides = sorted(chain["side"].dropna().unique().tolist())
     side_filter = st.multiselect("Side", options=sides, default=sides)

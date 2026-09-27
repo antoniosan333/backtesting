@@ -20,6 +20,8 @@ def _format_toml_value(value: Any, key_path: str) -> str:
         return f"{value:.10g}"
     if isinstance(value, int):
         return str(value)
+    if isinstance(value, list):
+        return "[" + ", ".join(_format_toml_value(item, key_path) for item in value) + "]"
     raise TypeError(f"Unsupported TOML value for {key_path}: {value!r} ({type(value).__name__})")
 
 

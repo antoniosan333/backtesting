@@ -45,6 +45,11 @@ class StrategyContext:
     open_options: Mapping[str, OpenOptionView] = field(default_factory=lambda: MappingProxyType({}))
     last_fills: tuple[dict[str, Any], ...] = ()
     last_rejections: tuple[dict[str, Any], ...] = ()
+    iv30: float | None = None
+    hv20: float | None = None
+    iv_rank_252: float | None = None
+    iv_pctile_252: float | None = None
+    iv_hv_ratio: float | None = None
 
 
 @dataclass

@@ -50,5 +50,5 @@ def test_environment_strings_are_coerced_by_pydantic(tmp_path: Path, monkeypatch
 
 
 def test_toml_format_error_identifies_unsupported_key_and_value() -> None:
-    with pytest.raises(TypeError, match=r"section\.unsupported.*list"):
-        _dump_toml({"section": {"unsupported": []}})
+    with pytest.raises(TypeError, match=r"Unsupported TOML value"):
+        _dump_toml({"section": {"unsupported": {"nested": "dict"}}})

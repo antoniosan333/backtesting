@@ -198,3 +198,71 @@ def _iv_percentile(iv: pd.Series, lookback: int) -> pd.Series:
         return float(np.sum(values < current) / len(values))
 
     return iv.rolling(lookback, min_periods=lookback).apply(_share, raw=True)
+
+
+# ---------------------------------------------------------------------------
+# Vol series from pre-computed volatility_history (DoltHub)
+# ---------------------------------------------------------------------------
+
+def build_vol_series_from_history(
+    vol_history: pd.DataFrame,
+    earnings: pd.DataFrame | None = None,
+) -> pd.DataFrame:
+    """Build a vol series from DoltHub ``volatility_history`` data.
+
+    This is the fast path — no chain interpolation needed.  Each row already
+    has ``iv_current`` (≈ IV30) and ``hv_current`` (≈ HV20) with year-high/low
+    for IV rank.
+
+    Output columns match ``build_vol_series()`` where possible so downstream
+    ``earnings_cycle`` code works with either source.
+    """
+    if vol_history is None or vol_history.empty:
+        return pd.DataFrame()
+    frame = vol_history.copy()
+    frame["date"] = frame["date"].astype(str).str[:10]
+    frame = frame.sort_values("date").drop_duplicates("date").reset_index(drop=True)
+
+    # Rename to match build_vol_series output
+    out = pd.DataFrame({
+        "date": frame["date"],
+        "close": 0.0,  # not in vol_history; merge from bars if needed
+        "hv20": pd.to_numeric(frame.get("hv_current"), errors="coerce"),
+        "iv30": pd.to_numeric(frame.get("iv_current"), errors="coerce"),
+        "iv_front": pd.to_numeric(frame.get("iv_current"), errors="coerce"),
+        "front_straddle": None,
+        "front_expiry": None,
+        "front_dte": None,
+    })
+
+    # IV rank from year-high/low (pre-computed by DoltHub)
+    iv30 = pd.to_numeric(frame.get("iv_current"), errors="coerce")
+    iv_high = pd.to_numeric(frame.get("iv_year_high"), errors="coerce")
+    iv_low = pd.to_numeric(frame.get("iv_year_low"), errors="coerce")
+    span = (iv_high - iv_low).replace(0.0, np.nan)
+    out["iv_rank_252"] = ((iv30 - iv_low) / span).to_numpy()
+    out["iv_pctile_252"] = np.nan  # not directly available
+
+    # IV-HV spread/ratio
+    hv20 = pd.to_numeric(frame.get("hv_current"), errors="coerce")
+    out["iv_hv_spread"] = (iv30 - hv20).to_numpy()
+    out["iv_hv_ratio"] = (iv30 / hv20.replace(0.0, np.nan)).to_numpy()
+
+    # Earnings context
+    earnings_df = earnings if earnings is not None else pd.DataFrame()
+    context = [_context_columns(day, earnings_df) for day in out["date"]]
+    ctx_frame = pd.DataFrame(context)
+    for col in ctx_frame.columns:
+        out[col] = ctx_frame[col].values
+
+    out["event_vol"] = None
+    out["implied_event_move"] = None
+
+    keep = [
+        "date", "close", "hv20", "iv30", "iv_front", "front_straddle",
+        "front_expiry", "front_dte", "iv_rank_252", "iv_pctile_252",
+        "iv_hv_spread", "iv_hv_ratio",
+        "days_to_next_earnings", "days_since_last_earnings",
+        "event_vol", "implied_event_move",
+    ]
+    return out[keep]

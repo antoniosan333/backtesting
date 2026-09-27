@@ -22,7 +22,7 @@ from lambdaclass.config import (
 )
 from lambdaclass.data_adapters.optionsdx_normalize import NormalizeOptions, run_normalize
 from lambdaclass.data_adapters.yfinance_adapter import YFinanceAdapter
-from lambdaclass.data_adapters.dolthub_chain import fetch_dolthub_chain
+from lambdaclass.data_adapters.dolthub_chain import fetch_dolthub_chain, fetch_dolthub_vol_history
 from lambdaclass.data_adapters.edgar_earnings import fetch_earnings_frame
 from lambdaclass.earnings.calendar import normalize_earnings_frame
 from lambdaclass.reporting import dashboard as reporting_dashboard
@@ -43,7 +43,7 @@ from lambdaclass.state import load_json, save_json
 from lambdaclass.storage.duckdb_store import DuckDBStore
 from lambdaclass.storage.optionsdx_reader import read_atm_slice
 from lambdaclass.volatility.earnings_cycle import align_events, cycle_summary, event_table, normalize
-from lambdaclass.volatility.series import build_vol_series, merge_vol_cache
+from lambdaclass.volatility.series import build_vol_series, build_vol_series_from_history, merge_vol_cache
 from lambdaclass.volatility.universe import PILOT_SYMBOLS, load_stock_universe
 from lambdaclass.strategies.base import Strategy
 from lambdaclass.strategies.loader import StrategyLoadError, load_strategy_class
@@ -685,6 +685,242 @@ def dashboard_cmd(
 
 
 app.add_typer(universe_app, name="universe")
+
+
+# ---------------------------------------------------------------------------
+# DoltHub + volatility commands
+# ---------------------------------------------------------------------------
+
+@app.command("fetch-dolthub")
+def fetch_dolthub(
+    symbol: str,
+    start: str = typer.Option("2020-01-01", help="Start date YYYY-MM-DD"),
+    end: str | None = typer.Option(None, help="End date YYYY-MM-DD (default: today)"),
+    vol_only: bool = typer.Option(False, "--vol-only", help="Fetch only volatility_history (faster)"),
+) -> None:
+    """Fetch option chain or vol history from DoltHub for one symbol."""
+    root = _repo_root()
+    sym = _validate_symbol(symbol)
+    prefs = _load_preferences(root)
+    store = DuckDBStore(root / prefs.paths.data_dir)
+    end_date = end or date.today().isoformat()
+
+    if vol_only:
+        typer.echo(f"Fetching vol history {sym} {start} → {end_date} from DoltHub...")
+        vol_df = fetch_dolthub_vol_history(sym, start, end_date)
+        if vol_df.empty:
+            typer.echo(f"No vol history rows for {sym}.")
+            return
+        vol_dir = root / prefs.paths.data_dir / "cache" / "vol"
+        vol_dir.mkdir(parents=True, exist_ok=True)
+        vol_path = vol_dir / f"{sym}.parquet"
+        vol_df.to_parquet(vol_path, index=False)
+        typer.echo(f"Vol history {sym}: {len(vol_df)} rows → {vol_path}")
+    else:
+        typer.echo(f"Fetching chain {sym} {start} → {end_date} from DoltHub...")
+        chain_df = fetch_dolthub_chain(sym, start, end_date)
+        if chain_df.empty:
+            typer.echo(f"No chain rows for {sym}.")
+            return
+        # Merge underlying_last from stock bars if available
+        bars = store.read_bars(sym)
+        if not bars.empty:
+            close_map = dict(zip(bars["date"].astype(str).str[:10], pd.to_numeric(bars["close"], errors="coerce")))
+            chain_df["underlying_last"] = chain_df["asof"].map(close_map)
+        else:
+            chain_df["underlying_last"] = 0.0
+        # Compute DTE
+        chain_df["dte"] = (
+            pd.to_datetime(chain_df["expiry"], errors="coerce") -
+            pd.to_datetime(chain_df["asof"], errors="coerce")
+        ).dt.days
+        store.write_chain(sym, chain_df)
+        typer.echo(f"Chain {sym}: {len(chain_df)} rows → data/options/{sym}.parquet")
+
+
+@app.command("fetch-dolthub-universe")
+def fetch_dolthub_universe(
+    start: str = typer.Option("2020-01-01", help="Start date YYYY-MM-DD"),
+    end: str | None = typer.Option(None, help="End date YYYY-MM-DD (default: today)"),
+    vol_only: bool = typer.Option(False, "--vol-only", help="Fetch only volatility_history"),
+    pilot: bool = typer.Option(False, "--pilot", help="Use 25-symbol pilot list instead of full universe"),
+    delay: float = typer.Option(2.0, help="Seconds between symbols (rate limiting)"),
+) -> None:
+    """Fetch DoltHub data for every symbol in the weekly options universe."""
+    import time
+
+    root = _repo_root()
+    prefs = _load_preferences(root)
+    store = DuckDBStore(root / prefs.paths.data_dir)
+    end_date = end or date.today().isoformat()
+
+    if pilot:
+        symbols = list(PILOT_SYMBOLS)
+    else:
+        universe_path = root / "data" / "weekly_options_stocks.csv"
+        symbols = load_stock_universe(universe_path)
+
+    typer.echo(f"Fetching {'vol history' if vol_only else 'chain'} for {len(symbols)} symbols ({start} → {end_date})...")
+    ok, fail = 0, 0
+    for i, sym in enumerate(symbols, 1):
+        try:
+            if vol_only:
+                vol_df = fetch_dolthub_vol_history(sym, start, end_date)
+                if not vol_df.empty:
+                    vol_dir = root / prefs.paths.data_dir / "cache" / "vol"
+                    vol_dir.mkdir(parents=True, exist_ok=True)
+                    vol_df.to_parquet(vol_dir / f"{sym}.parquet", index=False)
+                    typer.echo(f"  [{i}/{len(symbols)}] {sym}: {len(vol_df)} vol rows ✓")
+                    ok += 1
+                else:
+                    typer.echo(f"  [{i}/{len(symbols)}] {sym}: no data")
+                    fail += 1
+            else:
+                chain_df = fetch_dolthub_chain(sym, start, end_date)
+                if not chain_df.empty:
+                    bars = store.read_bars(sym)
+                    if not bars.empty:
+                        close_map = dict(zip(bars["date"].astype(str).str[:10], pd.to_numeric(bars["close"], errors="coerce")))
+                        chain_df["underlying_last"] = chain_df["asof"].map(close_map)
+                    else:
+                        chain_df["underlying_last"] = 0.0
+                    chain_df["dte"] = (
+                        pd.to_datetime(chain_df["expiry"], errors="coerce") -
+                        pd.to_datetime(chain_df["asof"], errors="coerce")
+                    ).dt.days
+                    store.write_chain(sym, chain_df)
+                    typer.echo(f"  [{i}/{len(symbols)}] {sym}: {len(chain_df)} chain rows ✓")
+                    ok += 1
+                else:
+                    typer.echo(f"  [{i}/{len(symbols)}] {sym}: no data")
+                    fail += 1
+        except Exception as exc:
+            typer.echo(f"  [{i}/{len(symbols)}] {sym}: ERROR {exc}")
+            fail += 1
+        if i < len(symbols):
+            time.sleep(delay)
+    typer.echo(f"\nDone: {ok} ok, {fail} failed/no data, out of {len(symbols)} symbols.")
+
+
+@app.command("vol")
+def vol_symbol(
+    symbol: str,
+    start: str | None = typer.Option(None, help="Start date YYYY-MM-DD"),
+    end: str | None = typer.Option(None, help="End date YYYY-MM-DD"),
+) -> None:
+    """Build daily volatility series for *symbol* from stored chain or vol cache."""
+    root = _repo_root()
+    sym = _validate_symbol(symbol)
+    prefs = _load_preferences(root)
+    store = DuckDBStore(root / prefs.paths.data_dir)
+
+    bars = store.read_bars(sym, start=start, end=end)
+    if bars.empty:
+        typer.echo(f"No stock bars for {sym}. Run `lambdaclass fetch {sym}` first.")
+        raise typer.Exit(1)
+    earnings = store.read_earnings(sym)
+
+    # Try vol history cache first (fast path)
+    vol_cache_path = root / prefs.paths.data_dir / "cache" / "vol" / f"{sym}.parquet"
+    if vol_cache_path.is_file():
+        vol_history = pd.read_parquet(vol_cache_path)
+        series = build_vol_series_from_history(vol_history, earnings)
+        if not series.empty:
+            # Merge close from bars
+            close_map = dict(zip(bars["date"].astype(str).str[:10], pd.to_numeric(bars["close"], errors="coerce")))
+            series["close"] = series["date"].map(close_map).fillna(0.0)
+            typer.echo(f"Vol series (from vol_history) {sym}: {len(series)} rows")
+        else:
+            typer.echo(f"vol_history empty for {sym}, falling back to chain.")
+            series = _vol_from_chain(store, sym, bars, earnings)
+    else:
+        series = _vol_from_chain(store, sym, bars, earnings)
+
+    if series.empty:
+        typer.echo(f"No vol series for {sym}. Fetch chain or vol history first.")
+        raise typer.Exit(1)
+
+    vol_dir = root / prefs.paths.data_dir / "cache" / "vol"
+    vol_dir.mkdir(parents=True, exist_ok=True)
+    out_path = vol_dir / f"{sym}.parquet"
+    series.to_parquet(out_path, index=False)
+    typer.echo(f"Vol series {sym}: {len(series)} rows → {out_path}")
+    if "iv30" in series.columns:
+        iv = pd.to_numeric(series["iv30"], errors="coerce").dropna()
+        if not iv.empty:
+            typer.echo(f"  IV30 range: {iv.min():.4f} – {iv.max():.4f} (last: {iv.iloc[-1]:.4f})")
+
+
+def _vol_from_chain(store: DuckDBStore, sym: str, bars: pd.DataFrame, earnings: pd.DataFrame) -> pd.DataFrame:
+    """Build vol series from stored option chain."""
+    chain = store.read_chain(sym)
+    if chain is None or chain.empty:
+        return pd.DataFrame()
+    return build_vol_series(bars, chain, earnings)
+
+
+@app.command("iv-study")
+def iv_study(
+    symbols: list[str] | None = typer.Option(None, "--symbol", help="Specific symbols (repeatable); default: pilot list"),
+    start: str | None = typer.Option(None, help="Start date YYYY-MM-DD"),
+    end: str | None = typer.Option(None, help="End date YYYY-MM-DD"),
+    pilot: bool = typer.Option(True, "--pilot/--no-pilot", help="Use 25-symbol pilot list (default)"),
+) -> None:
+    """Run the earnings IV ramp/crush study across symbols."""
+    from lambdaclass.earnings_cycle_runner import run_earnings_iv_study
+
+    root = _repo_root()
+    prefs = _load_preferences(root)
+    store = DuckDBStore(root / prefs.paths.data_dir)
+    vol_cache_dir = root / prefs.paths.data_dir / "cache" / "vol"
+
+    if symbols:
+        sym_list = [s.upper() for s in symbols]
+    elif pilot:
+        sym_list = list(PILOT_SYMBOLS)
+    else:
+        universe_path = root / "data" / "weekly_options_stocks.csv"
+        sym_list = load_stock_universe(universe_path)
+
+    typer.echo(f"Running IV ramp/crush study for {len(sym_list)} symbols...")
+    result = run_earnings_iv_study(
+        store=store,
+        symbols=sym_list,
+        start=start,
+        end=end,
+        vol_cache_dir=vol_cache_dir,
+    )
+
+    summary = result["summary"]
+    typer.echo(f"\n{'='*50}")
+    typer.echo(f"IV Ramp/Crush Study Results")
+    typer.echo(f"{'='*50}")
+    typer.echo(f"Symbols with data:  {summary.get('symbols_with_data', 0)}")
+    typer.echo(f"Total events:       {summary.get('total_events', 0)}")
+    typer.echo(f"Median ramp pct:    {summary.get('median_ramp_pct', 0)*100:.2f}%")
+    typer.echo(f"Median crush pct:   {summary.get('median_crush_pct', 0)*100:.2f}%")
+    typer.echo(f"Realized < implied: {summary.get('share_realized_below_implied', 0)*100:.1f}% of the time")
+    typer.echo(f"Median realized/impl: {summary.get('median_realized_over_implied', 0):.2f}x")
+
+    events_df = result["event_table"]
+    if not events_df.empty:
+        out_dir = root / prefs.paths.data_dir / "earnings" / "events"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        out_path = out_dir / "iv_ramp_crush_study.parquet"
+        events_df.to_parquet(out_path, index=False)
+        typer.echo(f"\nEvent table: {out_path} ({len(events_df)} events)")
+
+        cycle_df = result["cycle"]
+        if not cycle_df.empty:
+            cycle_path = out_dir / "iv_cycle_aggregate.parquet"
+            cycle_df.to_parquet(cycle_path, index=False)
+            typer.echo(f"Cycle aggregate: {cycle_path}")
+
+    per_symbol = result.get("per_symbol", {})
+    if per_symbol:
+        typer.echo(f"\nPer-symbol event counts:")
+        for sym, count in sorted(per_symbol.items(), key=lambda x: -x[1])[:10]:
+            typer.echo(f"  {sym}: {count} events")
 
 
 def main() -> None:

@@ -141,11 +141,11 @@ def test_run_snapshot_hash_inputs_include_symbol_and_options_source_without_scaf
     assert "end" not in snapshot["cli_overrides"]
 
 
-def test_fetch_earnings_help_has_no_force_option() -> None:
+def test_fetch_earnings_help_has_force_option() -> None:
     result = runner.invoke(cli.app, ["fetch-earnings", "--help"])
 
     assert result.exit_code == 0
-    assert "--force" not in result.output
+    assert "--force" in result.output
 
 
 def test_init_does_not_create_unused_cache_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

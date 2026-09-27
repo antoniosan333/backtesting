@@ -81,20 +81,21 @@ def test_load_chain_prunes_unrequested_year_month_partitions(tmp_path: Path) -> 
     out = load_normalized_optionsdx_chain(root, "spy", ["2024-01-05"])
 
     assert len(out) == 1
-    assert out.iloc[0].to_dict() == {
-        "contract_symbol": "SPY_20240216_C_500000",
-        "side": "call",
-        "strike": 500.0,
-        "last_price": 4.25,
-        "bid": 4.0,
-        "ask": 4.5,
-        "implied_volatility": 0.2,
-        "open_interest": 0.0,
-        "volume": 12,
-        "expiry": "2024-02-16",
-        "asof": "2024-01-05",
-        "symbol": "SPY",
-    }
+    row = out.iloc[0].to_dict()
+    assert row.pop("contract_symbol") == "SPY_20240216_C_500000"
+    assert row.pop("side") == "call"
+    assert row.pop("strike") == 500.0
+    assert row.pop("last_price") == 4.25
+    assert row.pop("bid") == 4.0
+    assert row.pop("ask") == 4.5
+    assert row.pop("implied_volatility") == 0.2
+    assert row.pop("open_interest") == 0.0
+    assert row.pop("volume") == 12
+    assert row.pop("expiry") == "2024-02-16"
+    assert row.pop("asof") == "2024-01-05"
+    assert row.pop("symbol") == "SPY"
+    assert pd.isna(row.pop("underlying_last"))
+    assert pd.isna(row.pop("dte"))
 
 
 def test_load_chain_keeps_legacy_unpartitioned_files_as_fallback(tmp_path: Path) -> None:

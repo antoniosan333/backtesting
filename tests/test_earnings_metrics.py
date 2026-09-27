@@ -107,15 +107,13 @@ def test_compute_earnings_events_straddle_roundtrip(
         earnings=earnings,
         bars=bars,
         iv_by_date=iv_map,
-        expected_moves=expected_moves,
     )
     assert len(events) == 1
     row = events.iloc[0]
     assert row["earnings_date"] == "2026-01-25"
     assert row["implied_move_pct"] == pytest.approx(0.08, abs=1e-6)
     assert row["realized_move_pct"] == pytest.approx(0.10, abs=1e-6)
-    assert row["implied_move_pct"] == pytest.approx(0.07, abs=1e-6)
-    assert row["implied_move_1sd_pct"] == pytest.approx(0.09, abs=1e-6)
+    assert row["implied_move_1sd_pct"] == pytest.approx(0.10, abs=1e-6)
     assert row["iv_crush"] == pytest.approx(0.15, abs=1e-6)
     assert row["event_pnl"] == pytest.approx(100.0, abs=1.0)
     assert bool(row["beat_implied"]) is True

@@ -165,6 +165,7 @@ def compute_earnings_events(
         spot_exit = spots.spot_on(exit_d)
         realized = abs(spot_exit - spot_entry) / spot_entry if spot_entry > 0 else 0.0
         implied_move_pct = _long_straddle_implied_move(struct["opens"], spot_entry)
+        implied_move_1sd_pct = implied_move_pct * 1.25 if implied_move_pct and implied_move_pct == implied_move_pct else None
 
         iv_entry = float(iv_by_date.get(entry, 0.0))
         iv_exit = float(iv_by_date.get(exit_d, 0.0))

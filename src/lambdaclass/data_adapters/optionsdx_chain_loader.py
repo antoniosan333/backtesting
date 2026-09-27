@@ -85,7 +85,7 @@ def _read_filtered(paths: list[Path], symbol: str, date_set: set[str]) -> pd.Dat
         if missing:
             raise KeyError(next(iter(sorted(missing))))
         projected = sorted(required)
-        projected.extend(column for column in ("contract_symbol", "open_interest") if column in columns)
+        projected.extend(column for column in ("contract_symbol", "open_interest", "underlying_last", "dte") if column in columns)
         projection = ", ".join(f'"{column}"' for column in projected)
         query = f"""
             SELECT {projection},
@@ -167,8 +167,8 @@ def load_normalized_optionsdx_chain(
             "expiry": raw["expire_date"].astype(str),
             "asof": raw["_asof"],
             "symbol": sym,
-            "underlying_last": pd.to_numeric(raw["underlying_last"], errors="coerce"),
-            "dte": pd.to_numeric(raw["dte"], errors="coerce"),
+            "underlying_last": pd.to_numeric(raw["underlying_last"], errors="coerce") if "underlying_last" in raw.columns else pd.Series(float("nan"), index=raw.index, dtype="float64"),
+            "dte": pd.to_numeric(raw["dte"], errors="coerce") if "dte" in raw.columns else pd.Series(float("nan"), index=raw.index, dtype="float64"),
         }
     )
     return out.sort_values(["asof", "contract_symbol"]).reset_index(drop=True)

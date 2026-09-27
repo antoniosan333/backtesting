@@ -13,3 +13,5 @@ def test_preferences_round_trip(tmp_path: Path) -> None:
     assert loaded.defaults.data_adapter == "yfinance"
     assert loaded.expected_move.skew_factor == 0.85
     assert loaded.expected_move.horizons_dte == [0, 7, 30]
+    assert loaded.volatility.history_start == "2019-01-01"
+    assert loaded.volatility.lookback_days == 252

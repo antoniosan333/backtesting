@@ -1,6 +1,6 @@
 # ADR-0008: Historical vs implied volatility analysis and the earnings IV cycle
 
-**Status:** Proposed
+**Status:** Accepted
 
 ## Context
 

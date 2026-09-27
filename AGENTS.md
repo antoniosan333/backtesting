@@ -37,6 +37,7 @@ All via `lambdaclass` (Python ≥ 3.11, `pip install -e ".[dev]"`).
 | `compare STRATEGY [--limit]` | Compare metrics for a strategy |
 | `dashboard [--host] [--port] [--headless/--no-headless]` | Streamlit read-only review UI (`streamlit run` the packaged `reporting/dashboard/app.py`) |
 | `normalize-optionsdx` | OptionsDX `*.txt` → normalized Parquet + JSON reports (prefs `[optionsdx]`) |
+| `vol SYMBOL` or `vol --pilot` / `vol --universe` | Build cached HV/IV series under `data/cache/vol/` and print the earnings IV cycle. Earnings dates: `fetch-earnings SYMBOL --source edgar` |
 
 `normalize-optionsdx` flags: `--input-dir`, `--output-dir`, `--reports-dir`, `--dry-run`, `--fail-on-errors`, `--fail-on-gates`, `--max-negative-iv-rate`, `--max-crossed-market-rate`.
 
@@ -66,6 +67,7 @@ All via `lambdaclass` (Python ≥ 3.11, `pip install -e ".[dev]"`).
 | Run loop + outputs | `src/lambdaclass/backtest/engine.py` |
 | BSM / Greeks / mid quotes | `src/lambdaclass/options/pricing.py` |
 | Earnings calendar helpers | `src/lambdaclass/earnings/calendar.py` |
+| HV / IV series and earnings cycle | `src/lambdaclass/volatility/` ([ADR-0008](docs/decisions/0008-volatility-analysis.md)) |
 | Metrics / HTML report / dashboard | `src/lambdaclass/reporting/` (`reporting/dashboard/` for Streamlit) |
 
 ## Auto-appended by continual-learning

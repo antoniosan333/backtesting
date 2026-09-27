@@ -5,9 +5,15 @@
 state/*.json
 
 # Local data and outputs (large / machine-specific)
-data/
+data/*
 runs/
 zRawData/
+
+# Track the weekly-options earnings universe
+!data/weekly_options_universe.csv
+!data/weekly_options_universe.json
+!data/weekly_options_stocks.csv
+!data/weekly_options_universe_README.md
 
 # Python
 __pycache__/

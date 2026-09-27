@@ -75,7 +75,7 @@ def _iv_at_strike(chain: pd.DataFrame, strike: float) -> float | None:
     return float(values.mean()) if not values.empty else None
 
 
-def _interpolated_atm_iv(chain: pd.DataFrame, spot: float) -> float | None:
+def interpolated_atm_iv(chain: pd.DataFrame, spot: float) -> float | None:
     strikes = sorted(float(value) for value in pd.to_numeric(chain["strike"], errors="coerce").dropna().unique())
     points = [(strike, _iv_at_strike(chain, strike)) for strike in strikes]
     points = [(strike, iv) for strike, iv in points if iv is not None]
@@ -143,7 +143,7 @@ def expected_move_for_expiry(
         raise ValueError("chain has no valid strikes")
     atm_strike = min(strikes, key=lambda strike: (abs(strike - resolved_spot), strike))
     dte = _dte(subset, expiry_text)
-    atm_iv = _interpolated_atm_iv(subset, resolved_spot)
+    atm_iv = interpolated_atm_iv(subset, resolved_spot)
     straddle, reasons = _pair_price(subset, atm_strike, atm_strike, max_spread_pct)
 
     iv_1sd = None

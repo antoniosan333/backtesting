@@ -24,6 +24,8 @@ from lambdaclass.config import (
 from lambdaclass.data_adapters.optionsdx_chain_loader import load_normalized_optionsdx_chain
 from lambdaclass.data_adapters.optionsdx_normalize import NormalizeOptions, run_normalize
 from lambdaclass.data_adapters.yfinance_adapter import YFinanceAdapter
+from lambdaclass.data_adapters.dolthub_chain import fetch_dolthub_chain
+from lambdaclass.data_adapters.edgar_earnings import fetch_earnings_frame
 from lambdaclass.earnings.calendar import normalize_earnings_frame
 from lambdaclass.reporting.earnings_metrics import (
     average_iv_from_option_trades,
@@ -35,6 +37,10 @@ from lambdaclass.reporting import dashboard as reporting_dashboard
 from lambdaclass.reporting.tearsheet import write_tearsheet
 from lambdaclass.state import load_json, save_json
 from lambdaclass.storage.duckdb_store import DuckDBStore
+from lambdaclass.storage.optionsdx_reader import read_atm_slice
+from lambdaclass.volatility.earnings_cycle import align_events, cycle_summary, event_table, normalize
+from lambdaclass.volatility.series import build_vol_series, merge_vol_cache
+from lambdaclass.volatility.universe import PILOT_SYMBOLS, load_stock_universe
 from lambdaclass.strategies.base import Strategy
 from lambdaclass.strategies.scaffolder import ensure_month_dir, scaffold_strategy
 
@@ -225,6 +231,7 @@ def fetch_data(
 def fetch_earnings(
     symbol: str,
     csv: str | None = typer.Option(None, help="Optional CSV with earnings_date [, timing] columns"),
+    source: str = typer.Option("yfinance", help="yfinance or edgar"),
     force: bool = typer.Option(False, help="Overwrite existing rows for matching dates (via dedupe keep last)"),
 ) -> None:
     """Fetch or import earnings calendar into data/earnings/<SYMBOL>.parquet."""
@@ -239,17 +246,24 @@ def fetch_earnings(
             raise typer.BadParameter(f"CSV not found: {path}")
         raw = pd.read_csv(path)
         frame = normalize_earnings_frame(raw, symbol=symbol, source="csv")
-    else:
+        source_name = "csv"
+    elif source.strip().lower() == "edgar":
+        frame = fetch_earnings_frame(symbol)
+        source_name = "edgar"
+    elif source.strip().lower() == "yfinance":
         adapter = _get_adapter(prefs.defaults.data_adapter)
         raw = _fetch_with_retry(lambda: adapter.get_earnings_dates(symbol))
         frame = normalize_earnings_frame(raw, symbol=symbol, source="yfinance")
+        source_name = "yfinance"
+    else:
+        raise typer.BadParameter("source must be yfinance, edgar, or omitted when --csv is set")
     out_path = store.write_earnings(symbol, frame)
     markers_path = root / "state" / "earnings_fetch_markers.json"
     markers = load_json(markers_path)
     markers[symbol] = {
         "rows": int(len(frame)),
         "path": str(out_path),
-        "source": "csv" if csv else "yfinance",
+        "source": source_name,
         "updated_at": datetime.now(tz=timezone.utc).isoformat(),
     }
     save_json(markers_path, markers)
@@ -305,6 +319,8 @@ def run_strategy(
     _warn_chain_coverage(options_chain, bars["date"], chain_src)
     # Earnings calendar (full history so days_to/since work at window edges)
     earnings = store.read_earnings(symbol)
+    vol_path = root / prefs.paths.data_dir / "cache" / "vol" / f"{symbol}.parquet"
+    vol_series = pd.read_parquet(vol_path) if vol_path.is_file() else None
     now = datetime.now()
     month = ensure_month_dir(root / prefs.paths.strategies_dir, now=now).name
     cli_overrides = {"start": start, "end": end}
@@ -312,7 +328,9 @@ def run_strategy(
     cfg_hash = compute_config_hash(snapshot_payload)
     run_id = _run_id(cfg_hash, root)
     run_dir = root / prefs.paths.runs_dir / month / strategy.name / run_id
-    run_result = run_backtest(strategy, bars, options_chain, prefs, earnings=earnings)
+    run_result = run_backtest(
+        strategy, bars, options_chain, prefs, earnings=earnings, vol_series=vol_series
+    )
     trades_path, equity_path = write_run_outputs(run_result, run_dir)
     metrics = compute_metrics(run_result.equity_curve)
     events = compute_earnings_events(
@@ -367,6 +385,144 @@ def run_strategy(
         )
         if fail_on_rejected_orders:
             raise typer.Exit(code=1)
+
+
+def _symbols_for_vol(root: Path, symbol: str | None, pilot: bool, universe: bool) -> list[str]:
+    selected = int(symbol is not None) + int(pilot) + int(universe)
+    if selected != 1:
+        raise typer.BadParameter("Pass a symbol, --pilot, or --universe")
+    if symbol is not None:
+        return [symbol.upper()]
+    if pilot:
+        return list(PILOT_SYMBOLS)
+    return load_stock_universe(root / "data" / "weekly_options_stocks.csv")
+
+
+def _build_one_vol_series(
+    *,
+    root: Path,
+    prefs: Preferences,
+    store: DuckDBStore,
+    symbol: str,
+    start: str,
+    end: str,
+    rebuild: bool,
+) -> pd.DataFrame:
+    bars = store.read_bars(symbol, start=start, end=end)
+    if bars.empty:
+        raise RuntimeError("no stock bars; run fetch first")
+    ox_root = Path(prefs.optionsdx.output_dir)
+    if not ox_root.is_absolute():
+        ox_root = root / ox_root
+    chain = read_atm_slice(
+        ox_root,
+        symbol,
+        start,
+        end,
+        max_strike_distance_pct=prefs.volatility.max_strike_distance_pct,
+    )
+    if chain.empty:
+        chain = store.read_chain(symbol)
+        if not chain.empty and "asof" in chain.columns:
+            chain = chain[(chain["asof"].astype(str) >= start) & (chain["asof"].astype(str) <= end)]
+    if chain.empty:
+        chain = fetch_dolthub_chain(symbol, start, end)
+        if chain.empty:
+            raise RuntimeError("no option chain from DoltHub")
+        store.write_chain(symbol, chain)
+    earnings = store.read_earnings(symbol)
+    updated = build_vol_series(
+        bars,
+        chain,
+        earnings,
+        windows=prefs.volatility.hv_windows,
+        targets=prefs.volatility.iv_targets_dte,
+        lookback_days=prefs.volatility.lookback_days,
+    )
+    cache_path = root / prefs.paths.data_dir / "cache" / "vol" / f"{symbol}.parquet"
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    if rebuild or not cache_path.is_file():
+        series = updated
+    else:
+        series = merge_vol_cache(pd.read_parquet(cache_path), updated)
+    series.to_parquet(cache_path, index=False)
+    return series
+
+
+@app.command("vol")
+def vol_command(
+    symbol: str | None = typer.Argument(None, help="Ticker, or omit with --pilot / --universe"),
+    start: str | None = typer.Option(None, help="YYYY-MM-DD start; default is [volatility].history_start"),
+    end: str | None = typer.Option(None, help="YYYY-MM-DD end; default is today"),
+    rebuild: bool = typer.Option(False, help="Replace the cached series instead of refreshing the tail"),
+    csv: str | None = typer.Option(None, help="Write the series CSV for a single symbol"),
+    pilot: bool = typer.Option(False, help="Build the 25-name earnings pilot"),
+    universe: bool = typer.Option(False, help="Build every name in weekly_options_stocks.csv"),
+) -> None:
+    """Build the historical-versus-implied volatility series and print the earnings cycle."""
+    root = _repo_root()
+    prefs = _load_preferences(root)
+    store = DuckDBStore(root / prefs.paths.data_dir)
+    symbols = _symbols_for_vol(root, symbol, pilot, universe)
+    if csv and len(symbols) != 1:
+        raise typer.BadParameter("--csv applies to a single symbol")
+    start_day = start or prefs.volatility.history_start
+    end_day = end or datetime.now(tz=timezone.utc).date().isoformat()
+    markers_path = root / "state" / "vol_series_markers.json"
+    markers = load_json(markers_path)
+    skipped: list[dict[str, str]] = []
+    for ticker in symbols:
+        try:
+            series = _build_one_vol_series(
+                root=root,
+                prefs=prefs,
+                store=store,
+                symbol=ticker,
+                start=start_day,
+                end=end_day,
+                rebuild=rebuild,
+            )
+        except Exception as exc:
+            skipped.append({"symbol": ticker, "reason": str(exc)})
+            typer.secho(f"skip {ticker}: {exc}", fg=typer.colors.YELLOW, err=True)
+            continue
+        latest = series.dropna(subset=["iv30"]).tail(1)
+        if latest.empty:
+            latest = series.tail(1)
+        row = latest.iloc[0]
+        typer.echo(
+            f"{ticker} {row['date']} iv30={row['iv30']} hv20={row['hv20']} "
+            f"spread={row['iv_hv_spread']} ratio={row['iv_hv_ratio']} "
+            f"percentile={row['iv_pctile_252']} days_to_earnings={row['days_to_next_earnings']}"
+        )
+        earnings = store.read_earnings(ticker)
+        summary = cycle_summary(
+            event_table(
+                normalize(
+                    align_events(
+                        series,
+                        earnings,
+                        pre_days=prefs.volatility.pre_days,
+                        post_days=prefs.volatility.post_days,
+                    )
+                )
+            )
+        )
+        typer.echo(
+            f"  cycle ramp={summary['median_ramp_pct']:.3f} "
+            f"crush={summary['median_crush_pct']:.3f} "
+            f"inside_implied={summary['share_realized_below_implied']:.3f}"
+        )
+        markers[ticker] = {
+            "last_date": str(series["date"].iloc[-1]),
+            "rows": int(len(series)),
+            "updated_at": datetime.now(tz=timezone.utc).isoformat(),
+        }
+        if csv:
+            series.to_csv(csv, index=False)
+            typer.echo(f"  csv={csv}")
+    markers["skipped"] = skipped
+    save_json(markers_path, markers)
 
 
 @app.command("list-runs")

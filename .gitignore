@@ -9,6 +9,12 @@ data/
 runs/
 zRawData/
 
+# Track weekly options universe reference files
+!data/weekly_options_universe.csv
+!data/weekly_options_universe.json
+!data/weekly_options_stocks.csv
+!data/weekly_options_universe_README.md
+
 # Python
 __pycache__/
 *.py[cod]

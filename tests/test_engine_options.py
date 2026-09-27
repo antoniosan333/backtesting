@@ -7,7 +7,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from lambdaclass.backtest.engine import run_backtest, write_run_outputs
+from lambdaclass.backtest.engine import _prepare_chain_by_date, run_backtest, write_run_outputs
 from lambdaclass.config import DEFAULT_PREFERENCES, Preferences
 from lambdaclass.strategies.base import OptionLeg, Strategy, StrategyContext, StrategyDecision
 
@@ -49,6 +49,26 @@ def _chain_row(
         "asof": asof,
         "symbol": "ZZZ",
     }
+
+
+def test_prepare_chain_indexes_contracts_by_date() -> None:
+    chain = pd.DataFrame(
+        [
+            _chain_row(
+                "2026-01-01",
+                contract="ZZZ_C100",
+                side="call",
+                strike=100.0,
+                expiry="2026-02-01",
+                mid=2.0,
+            )
+        ]
+    )
+
+    prepared = _prepare_chain_by_date(chain)
+
+    assert prepared["2026-01-01"].index.name == "contract_symbol"
+    assert prepared["2026-01-01"].loc["ZZZ_C100", "strike"] == 100.0
 
 
 class LongCallOnce(Strategy):

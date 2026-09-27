@@ -12,11 +12,9 @@ class DuckDBStore:
         self.stocks_dir = data_root / "stocks"
         self.options_dir = data_root / "options"
         self.earnings_dir = data_root / "earnings"
-        self.cache_dir = data_root / "cache"
         self.stocks_dir.mkdir(parents=True, exist_ok=True)
         self.options_dir.mkdir(parents=True, exist_ok=True)
         self.earnings_dir.mkdir(parents=True, exist_ok=True)
-        self.cache_dir.mkdir(parents=True, exist_ok=True)
 
     def _stock_path(self, symbol: str) -> Path:
         return self.stocks_dir / f"{symbol.upper()}.parquet"
@@ -58,7 +56,13 @@ class DuckDBStore:
         if clauses:
             query = f"{query} WHERE {' AND '.join(clauses)}"
         with duckdb.connect() as con:
-            return con.execute(query, params).df()
+            bars = con.execute(query, params).df()
+        if "dividends" not in bars.columns:
+            bars["dividends"] = 0.0
+            bars.attrs["dividends_backfilled"] = True
+        else:
+            bars["dividends"] = pd.to_numeric(bars["dividends"], errors="coerce").fillna(0.0)
+        return bars
 
     def write_chain(self, symbol: str, chain: pd.DataFrame) -> Path:
         if chain.empty:
@@ -110,9 +114,7 @@ class DuckDBStore:
     ) -> pd.DataFrame:
         path = self._earnings_path(symbol)
         if not path.exists():
-            return pd.DataFrame(
-                columns=["symbol", "earnings_date", "timing", "source", "fetched_at"]
-            )
+            return pd.DataFrame(columns=["symbol", "earnings_date", "timing", "source", "fetched_at"])
         query = "SELECT * FROM read_parquet(?)"
         clauses: list[str] = []
         params: list[str] = [str(path)]

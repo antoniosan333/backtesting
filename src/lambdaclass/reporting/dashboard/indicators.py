@@ -39,7 +39,7 @@ def rsi(series: pd.Series, window: int = 14) -> pd.Series:
     loss = (-delta).clip(lower=0.0)
     avg_gain = gain.ewm(alpha=1.0 / window, min_periods=window, adjust=False).mean()
     avg_loss = loss.ewm(alpha=1.0 / window, min_periods=window, adjust=False).mean()
-    rs = avg_gain / avg_loss.replace(0.0, pd.NA)
+    rs = avg_gain / avg_loss.replace(0.0, float("nan"))
     out = 100.0 - (100.0 / (1.0 + rs))
     return out.fillna(100.0).where(avg_loss != 0, 100.0)
 
@@ -62,20 +62,24 @@ def equity_drawdown(equity: pd.Series) -> pd.Series:
     """Drawdown as ``(equity - running_max) / running_max``, in [-1, 0]."""
     eq = equity.astype(float)
     running_max = eq.cummax()
-    return ((eq - running_max) / running_max.replace(0, pd.NA)).fillna(0.0)
+    return ((eq - running_max) / running_max.replace(0, float("nan"))).fillna(0.0)
 
 
-def rolling_sharpe(equity: pd.Series, window: int = 21, periods_per_year: int = TRADING_DAYS_PER_YEAR) -> pd.Series:
+def rolling_sharpe(
+    equity: pd.Series, window: int = 21, periods_per_year: int = TRADING_DAYS_PER_YEAR
+) -> pd.Series:
     """Annualized rolling Sharpe over ``window`` periods of pct returns."""
     if window <= 1:
         raise ValueError("window must be > 1")
     returns = equity.astype(float).pct_change().fillna(0.0)
     mean = returns.rolling(window=window, min_periods=window).mean()
     std = returns.rolling(window=window, min_periods=window).std(ddof=0)
-    return (mean / std.replace(0.0, pd.NA)) * math.sqrt(periods_per_year)
+    return (mean / std.replace(0.0, float("nan"))) * math.sqrt(periods_per_year)
 
 
-def monthly_returns_table(equity: pd.DataFrame, date_col: str = "date", equity_col: str = "equity") -> pd.DataFrame:
+def monthly_returns_table(
+    equity: pd.DataFrame, date_col: str = "date", equity_col: str = "equity"
+) -> pd.DataFrame:
     """Year x Month pivot of monthly compounded returns.
 
     Resamples ``equity`` to month-end last value, then computes ``last/first - 1``
@@ -91,8 +95,8 @@ def monthly_returns_table(equity: pd.DataFrame, date_col: str = "date", equity_c
         return pd.DataFrame()
     monthly_first = df[equity_col].resample("MS").first()
     monthly_last = df[equity_col].resample("ME").last()
-    monthly_first.index = monthly_first.index.to_period("M")
-    monthly_last.index = monthly_last.index.to_period("M")
+    monthly_first.index = pd.DatetimeIndex(monthly_first.index).to_period("M")
+    monthly_last.index = pd.DatetimeIndex(monthly_last.index).to_period("M")
     common = monthly_first.index.intersection(monthly_last.index)
     if len(common) == 0:
         return pd.DataFrame()
@@ -109,7 +113,13 @@ def monthly_returns_table(equity: pd.DataFrame, date_col: str = "date", equity_c
     return pivot.reindex(columns=range(1, 13))
 
 
-def derived_run_stats(metrics: dict[str, float], trades: pd.DataFrame, num_trades_value: int, holding_value: float, win_rate_value: float) -> dict[str, float]:
+def derived_run_stats(
+    metrics: dict[str, float],
+    trades: pd.DataFrame,
+    num_trades_value: int,
+    holding_value: float,
+    win_rate_value: float,
+) -> dict[str, float]:
     """Combine engine-emitted metrics with dashboard-derived stats into a single dict."""
     out: dict[str, float] = {k: float(v) for k, v in metrics.items()}
     out["num_trades"] = float(num_trades_value)

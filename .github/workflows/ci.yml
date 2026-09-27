@@ -10,12 +10,36 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
-      - name: Install
+          python-version: ${{ matrix.python-version }}
+      - name: Install locked dependencies
+        run: |
+          python -m pip install uv==0.12.19
+          uv sync --locked --extra dev
+      - name: Ruff
+        run: |
+          uv run ruff check .
+          uv run ruff format --check .
+      - name: Mypy
+        run: uv run mypy src
+      - name: Pytest
+        run: uv run pytest
+
+  upstream-dependencies:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install latest compatible dependencies
         run: python -m pip install -e ".[dev]"
       - name: Pytest
         run: python -m pytest

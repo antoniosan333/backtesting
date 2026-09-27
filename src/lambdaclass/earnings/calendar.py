@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from bisect import bisect_left
+from dataclasses import dataclass
+from datetime import UTC, date, datetime
 from typing import Any
 
 import pandas as pd
@@ -70,29 +72,121 @@ def normalize_earnings_frame(df: pd.DataFrame, *, symbol: str, source: str) -> p
             "earnings_date": frame["earnings_date"].map(lambda x: parse_date(x).isoformat()),
             "timing": frame["timing"].map(normalize_timing),
             "source": source,
-            "fetched_at": datetime.now(tz=timezone.utc).replace(microsecond=0).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "fetched_at": datetime.now(tz=UTC).replace(microsecond=0).strftime("%Y-%m-%dT%H:%M:%SZ"),
         }
     )
     out = out.drop_duplicates(subset=["symbol", "earnings_date"], keep="last")
     return out.sort_values("earnings_date").reset_index(drop=True)
 
 
+@dataclass(frozen=True)
+class _EarningsEntry:
+    earnings_date: date
+    timing: str
+    source_position: int
+
+    def as_row(self) -> dict[str, Any]:
+        return {"earnings_date": self.earnings_date.isoformat(), "timing": self.timing}
+
+
+class EarningsCalendar:
+    """Parsed, sorted earnings dates with logarithmic date lookups."""
+
+    def __init__(self, earnings: pd.DataFrame | None) -> None:
+        entries: list[_EarningsEntry] = []
+        if earnings is not None and not earnings.empty:
+            for position, (_, row) in enumerate(earnings.iterrows()):
+                entries.append(
+                    _EarningsEntry(
+                        earnings_date=parse_date(row["earnings_date"]),
+                        timing=normalize_timing(row.get("timing", "unknown")),
+                        source_position=position,
+                    )
+                )
+        self._entries = sorted(entries, key=lambda entry: entry.earnings_date)
+        self._dates = [entry.earnings_date for entry in self._entries]
+        self._first_by_date: dict[date, _EarningsEntry] = {}
+        self._first_bmo_by_date: dict[date, _EarningsEntry] = {}
+        for entry in entries:
+            self._first_by_date.setdefault(entry.earnings_date, entry)
+            if entry.timing == "BMO":
+                self._first_bmo_by_date.setdefault(entry.earnings_date, entry)
+
+    def _next(self, bar_date: date) -> _EarningsEntry | None:
+        position = bisect_left(self._dates, bar_date)
+        return self._entries[position] if position < len(self._entries) else None
+
+    def _previous(self, bar_date: date) -> _EarningsEntry | None:
+        same_day_bmo = self._first_bmo_by_date.get(bar_date)
+        if same_day_bmo is not None:
+            return same_day_bmo
+        same_day_start = bisect_left(self._dates, bar_date)
+        if same_day_start == 0:
+            return None
+        previous_date = self._entries[same_day_start - 1].earnings_date
+        return self._first_by_date[previous_date]
+
+    def next_earnings_row(self, bar_date: str | date) -> dict[str, Any] | None:
+        entry = self._next(parse_date(bar_date))
+        return None if entry is None else entry.as_row()
+
+    def previous_earnings_row(self, bar_date: str | date) -> dict[str, Any] | None:
+        entry = self._previous(parse_date(bar_date))
+        return None if entry is None else entry.as_row()
+
+    def days_to_next_earnings(self, bar_date: str | date) -> int | None:
+        parsed = parse_date(bar_date)
+        entry = self._next(parsed)
+        return None if entry is None else (entry.earnings_date - parsed).days
+
+    def days_since_last_earnings(self, bar_date: str | date) -> int | None:
+        parsed = parse_date(bar_date)
+        entry = self._previous(parsed)
+        return None if entry is None else (parsed - entry.earnings_date).days
+
+    def context_fields(self, bar_date: str | date) -> dict[str, Any]:
+        parsed = parse_date(bar_date)
+        next_entry = self._next(parsed)
+        previous_entry = self._previous(parsed)
+        return {
+            "days_to_next_earnings": (
+                None if next_entry is None else (next_entry.earnings_date - parsed).days
+            ),
+            "days_since_last_earnings": (
+                None if previous_entry is None else (parsed - previous_entry.earnings_date).days
+            ),
+            "next_earnings_date": (None if next_entry is None else next_entry.earnings_date.isoformat()),
+            "earnings_timing": None if next_entry is None else next_entry.timing,
+        }
+
+    def nearest_earnings_row(
+        self, bar_date: str | date, *, max_days: int | None = None
+    ) -> dict[str, Any] | None:
+        parsed = parse_date(bar_date)
+        position = bisect_left(self._dates, parsed)
+        candidate_dates: set[date] = set()
+        if position < len(self._dates):
+            candidate_dates.add(self._dates[position])
+        if position:
+            candidate_dates.add(self._dates[position - 1])
+        candidates = [self._first_by_date[candidate_date] for candidate_date in candidate_dates]
+        if not candidates:
+            return None
+        best = min(
+            candidates,
+            key=lambda entry: (
+                abs((entry.earnings_date - parsed).days),
+                entry.source_position,
+            ),
+        )
+        if max_days is not None and abs((best.earnings_date - parsed).days) > max_days:
+            return None
+        return best.as_row()
+
+
 def next_earnings_row(bar_date: str | date, earnings: pd.DataFrame) -> dict[str, Any] | None:
     """Nearest earnings on or after ``bar_date`` (inclusive)."""
-    if earnings is None or earnings.empty:
-        return None
-    bd = parse_date(bar_date)
-    dates = pd.to_datetime(earnings["earnings_date"], errors="coerce")
-    mask = dates.notna() & (dates.dt.date >= bd)
-    sub = earnings.loc[mask].copy()
-    if sub.empty:
-        return None
-    sub = sub.assign(_d=dates.loc[mask]).sort_values("_d")
-    row = sub.iloc[0]
-    return {
-        "earnings_date": str(row["earnings_date"])[:10],
-        "timing": normalize_timing(row.get("timing", "unknown")),
-    }
+    return EarningsCalendar(earnings).next_earnings_row(bar_date)
 
 
 def previous_earnings_row(bar_date: str | date, earnings: pd.DataFrame) -> dict[str, Any] | None:
@@ -101,51 +195,17 @@ def previous_earnings_row(bar_date: str | date, earnings: pd.DataFrame) -> dict[
     For countdown ``days_since``: last earnings date that has already occurred relative to the bar.
     Same-day BMO: event has occurred (days_since=0). Same-day AMC: event not yet (use previous).
     """
-    if earnings is None or earnings.empty:
-        return None
-    bd = parse_date(bar_date)
-    best: dict[str, Any] | None = None
-    best_d: date | None = None
-    for _, row in earnings.iterrows():
-        ed = parse_date(row["earnings_date"])
-        timing = normalize_timing(row.get("timing", "unknown"))
-        if ed < bd:
-            if best_d is None or ed > best_d:
-                best_d = ed
-                best = {"earnings_date": ed.isoformat(), "timing": timing}
-        elif ed == bd and timing == "BMO":
-            # Release already happened at open
-            return {"earnings_date": ed.isoformat(), "timing": timing}
-    return best
+    return EarningsCalendar(earnings).previous_earnings_row(bar_date)
 
 
 def days_to_next_earnings(bar_date: str | date, earnings: pd.DataFrame) -> int | None:
-    nxt = next_earnings_row(bar_date, earnings)
-    if nxt is None:
-        return None
-    return (parse_date(nxt["earnings_date"]) - parse_date(bar_date)).days
+    return EarningsCalendar(earnings).days_to_next_earnings(bar_date)
 
 
 def days_since_last_earnings(bar_date: str | date, earnings: pd.DataFrame) -> int | None:
-    prev = previous_earnings_row(bar_date, earnings)
-    if prev is None:
-        bd = parse_date(bar_date)
-        # Same-day AMC: release not yet — no "since"
-        for _, row in earnings.iterrows():
-            ed = parse_date(row["earnings_date"])
-            timing = normalize_timing(row.get("timing", "unknown"))
-            if ed == bd and timing != "BMO":
-                return None
-        return None
-    return (parse_date(bar_date) - parse_date(prev["earnings_date"])).days
+    return EarningsCalendar(earnings).days_since_last_earnings(bar_date)
 
 
 def context_fields(bar_date: str | date, earnings: pd.DataFrame) -> dict[str, Any]:
     """Fields to attach to StrategyContext for ``bar_date``."""
-    nxt = next_earnings_row(bar_date, earnings)
-    return {
-        "days_to_next_earnings": days_to_next_earnings(bar_date, earnings),
-        "days_since_last_earnings": days_since_last_earnings(bar_date, earnings),
-        "next_earnings_date": None if nxt is None else nxt["earnings_date"],
-        "earnings_timing": None if nxt is None else nxt["timing"],
-    }
+    return EarningsCalendar(earnings).context_fields(bar_date)

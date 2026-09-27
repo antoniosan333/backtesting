@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -71,7 +71,7 @@ def run_normalize(opts: NormalizeOptions) -> dict[str, Any]:
         runs_dir.mkdir(parents=True, exist_ok=True)
         opts.output_root.mkdir(parents=True, exist_ok=True)
 
-    run_id = datetime.now(tz=timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    run_id = datetime.now(tz=UTC).strftime("%Y%m%dT%H%M%SZ")
     gate_failures: list[str] = []
     totals: dict[str, Any] = {
         "files": 0,

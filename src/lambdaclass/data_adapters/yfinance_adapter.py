@@ -1,33 +1,40 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 
 import pandas as pd
 import yfinance as yf
 
+BAR_COLUMNS = ["date", "open", "high", "low", "close", "volume", "dividends"]
+
 
 class YFinanceAdapter:
     def get_stock_bars(self, symbol: str, start: date, end: date) -> pd.DataFrame:
+        """Daily bars for ``start``..``end`` inclusive.
+
+        ``close`` is split-adjusted but not dividend-adjusted, so it stays
+        comparable with option strikes; cash dividends arrive in ``dividends``
+        on the ex-date instead.
+        """
         ticker = yf.Ticker(symbol)
-        bars = ticker.history(start=start.isoformat(), end=end.isoformat(), auto_adjust=False)
+        # yfinance treats ``end`` as exclusive.
+        exclusive_end = end + timedelta(days=1)
+        bars = ticker.history(start=start.isoformat(), end=exclusive_end.isoformat(), auto_adjust=False)
         if bars.empty:
-            return pd.DataFrame(columns=["date", "open", "high", "low", "close", "volume"])
+            return pd.DataFrame(columns=BAR_COLUMNS)
         bars = bars.reset_index()
         bars.columns = [col.lower().replace(" ", "_") for col in bars.columns]
-        rename_map = {
-            "datetime": "date",
-            "adj_close": "adj_close",
-        }
-        bars = bars.rename(columns=rename_map)
-        expected = ["date", "open", "high", "low", "close", "volume"]
-        for field in expected:
+        bars = bars.rename(columns={"datetime": "date"})
+        for field in BAR_COLUMNS:
             if field not in bars:
                 bars[field] = 0.0
+        bars["dividends"] = pd.to_numeric(bars["dividends"], errors="coerce").fillna(0.0).astype(float)
         bars["date"] = pd.to_datetime(bars["date"]).dt.date.astype(str)
-        return bars[expected]
+        return bars[BAR_COLUMNS]
 
     def get_option_chain(self, symbol: str, asof: date, expiry: date | None = None) -> pd.DataFrame:
         ticker = yf.Ticker(symbol)
+        current_asof = date.today()
         expirations = ticker.options or []
         if not expirations:
             return pd.DataFrame()
@@ -43,7 +50,7 @@ class YFinanceAdapter:
             puts["side"] = "put"
             merged = pd.concat([calls, puts], ignore_index=True)
             merged["expiry"] = exp
-            merged["asof"] = asof.isoformat()
+            merged["asof"] = current_asof.isoformat()
             frames.append(merged)
         if not frames:
             return pd.DataFrame()

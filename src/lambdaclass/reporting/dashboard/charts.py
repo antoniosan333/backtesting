@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Mapping, Sequence
+from collections.abc import Mapping, Sequence
 
 import numpy as np
 import pandas as pd
@@ -106,9 +106,7 @@ def price_with_signals(
         for name, series in indicators.items():
             if series is None or len(series) == 0:
                 continue
-            fig.add_trace(
-                go.Scatter(x=bars["date"], y=series, mode="lines", name=name)
-            )
+            fig.add_trace(go.Scatter(x=bars["date"], y=series, mode="lines", name=name))
 
     if trades is not None and not trades.empty and {"date", "action", "price"}.issubset(trades.columns):
         buys = trades[trades["action"].str.lower() == "buy"]
@@ -278,7 +276,9 @@ def chain_iv_scatter(
         x="strike",
         y="implied_volatility",
         color="side",
-        hover_data=[c for c in ("contract_symbol", "expiry", "open_interest", "volume") if c in chain.columns],
+        hover_data=[
+            c for c in ("contract_symbol", "expiry", "open_interest", "volume") if c in chain.columns
+        ],
         title=title,
     )
     fig.update_layout(template=theme)
@@ -296,9 +296,7 @@ def price_with_earnings(
     if bars is None or bars.empty or not {"date", "close"}.issubset(bars.columns):
         return _empty_figure(title, theme)
     fig = go.Figure()
-    fig.add_trace(
-        go.Scatter(x=bars["date"], y=bars["close"], mode="lines", name="Close")
-    )
+    fig.add_trace(go.Scatter(x=bars["date"], y=bars["close"], mode="lines", name="Close"))
     if earnings is not None and not earnings.empty and "earnings_date" in earnings.columns:
         closes = bars.copy()
         closes["date"] = closes["date"].astype(str).str[:10]

@@ -79,10 +79,18 @@ def greeks(side: Side, spot: float, strike: float, t: float, r: float, sigma: fl
     }
 
 
+def numeric_value(value: object) -> float:
+    try:
+        result = float(str(value))
+    except (TypeError, ValueError):
+        return 0.0
+    return 0.0 if pd.isna(result) else result
+
+
 def safe_option_mid(row: pd.Series) -> float:
-    bid = float(pd.to_numeric(row.get("bid"), errors="coerce") or 0.0)
-    ask = float(pd.to_numeric(row.get("ask"), errors="coerce") or 0.0)
-    last = float(pd.to_numeric(row.get("last_price"), errors="coerce") or 0.0)
+    bid = numeric_value(row.get("bid"))
+    ask = numeric_value(row.get("ask"))
+    last = numeric_value(row.get("last_price"))
     if bid > 0.0 and ask > 0.0 and bid <= ask:
         return (bid + ask) / 2.0
     return last

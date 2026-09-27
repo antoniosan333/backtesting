@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from lambdaclass.reporting.dashboard.option_strategies import preset_iron_condor
+from lambdaclass.options import preset_iron_condor
 from lambdaclass.strategies.base import OptionLeg, Strategy, StrategyContext, StrategyDecision
 
 
@@ -19,26 +19,23 @@ class StrategyImpl(Strategy):
         "min_dte": 7,
     }
 
-    def __init__(self) -> None:
-        self._open_legs: list[OptionLeg] = []
-
     def on_bar(self, context: StrategyContext) -> StrategyDecision:
         bar_date = str(context.row.get("date", ""))[:10]
 
-        if self._open_legs:
+        if context.open_options:
             since = context.days_since_last_earnings
             if since is not None and since >= int(self.params["exit_days_after"]):
                 close_legs = [
                     OptionLeg(
-                        contract_symbol=lg.contract_symbol,
-                        side=lg.side,
-                        strike=lg.strike,
-                        expiry=lg.expiry,
-                        quantity=-lg.quantity,
+                        contract_symbol=symbol,
+                        side=position.side,
+                        strike=position.strike,
+                        expiry=position.expiry.isoformat(),
+                        quantity=-position.quantity,
+                        reduce_only=True,
                     )
-                    for lg in self._open_legs
+                    for symbol, position in context.open_options.items()
                 ]
-                self._open_legs = []
                 return StrategyDecision(
                     action="hold",
                     option_legs=close_legs,
@@ -88,7 +85,6 @@ class StrategyImpl(Strategy):
             )
             for leg in legs
         ]
-        self._open_legs = list(option_legs)
         return StrategyDecision(
             action="hold",
             option_legs=option_legs,

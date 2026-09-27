@@ -6,9 +6,10 @@ import re
 import subprocess
 import sys
 import time
-from datetime import date, datetime, timezone
+from collections.abc import Callable
+from datetime import UTC, date, datetime
 from pathlib import Path
-from typing import Callable
+from typing import TypeVar
 
 import pandas as pd
 import typer
@@ -25,21 +26,23 @@ from lambdaclass.data_adapters.optionsdx_chain_loader import load_normalized_opt
 from lambdaclass.data_adapters.optionsdx_normalize import NormalizeOptions, run_normalize
 from lambdaclass.data_adapters.yfinance_adapter import YFinanceAdapter
 from lambdaclass.earnings.calendar import normalize_earnings_frame
+from lambdaclass.reporting import dashboard as reporting_dashboard
 from lambdaclass.reporting.earnings_metrics import (
     average_iv_from_option_trades,
     compute_earnings_events,
     summarize_earnings_events,
 )
 from lambdaclass.reporting.metrics import compute_metrics
-from lambdaclass.reporting import dashboard as reporting_dashboard
 from lambdaclass.reporting.tearsheet import write_tearsheet
 from lambdaclass.state import load_json, save_json
 from lambdaclass.storage.duckdb_store import DuckDBStore
 from lambdaclass.strategies.base import Strategy
-from lambdaclass.strategies.scaffolder import ensure_month_dir, scaffold_strategy
+from lambdaclass.strategies.scaffolder import scaffold_strategy
+from lambdaclass.symbols import validate_symbol
 
 app = typer.Typer(help="LambdaClass stock + options backtesting CLI")
 STRATEGY_NAME_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9_]*$")
+FetchResult = TypeVar("FetchResult")
 
 
 def _repo_root() -> Path:
@@ -55,8 +58,7 @@ def _warn_chain_coverage(options_chain: pd.DataFrame, bar_dates: pd.Series, sour
     """
     if options_chain.empty:
         typer.secho(
-            f"Warning: no options chain rows loaded from '{source}'. "
-            "Any option orders will be rejected.",
+            f"Warning: no options chain rows loaded from '{source}'. Any option orders will be rejected.",
             fg=typer.colors.YELLOW,
             err=True,
         )
@@ -108,7 +110,7 @@ def _git_short_sha(root: Path) -> str:
 
 
 def _run_id(config_hash: str, root: Path) -> str:
-    stamp = datetime.now(tz=timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    stamp = datetime.now(tz=UTC).strftime("%Y%m%dT%H%M%SZ")
     return f"{stamp}-{_git_short_sha(root)}-{config_hash}"
 
 
@@ -118,6 +120,13 @@ def _validate_strategy_name(strategy_name: str) -> str:
             "Strategy name must start with a letter and contain only letters, numbers, and underscores."
         )
     return strategy_name
+
+
+def _validate_symbol(symbol: str) -> str:
+    try:
+        return validate_symbol(symbol)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc), param_hint="symbol") from exc
 
 
 def _load_strategy(path: Path) -> Strategy:
@@ -147,7 +156,11 @@ def _find_strategy_file(strategies_dir: Path, strategy_name: str) -> Path:
     return resolved
 
 
-def _fetch_with_retry(fetch_fn: Callable[[], object], retries: int = 3, delay_seconds: float = 1.0) -> object:
+def _fetch_with_retry(
+    fetch_fn: Callable[[], FetchResult],
+    retries: int = 3,
+    delay_seconds: float = 1.0,
+) -> FetchResult:
     last_error: Exception | None = None
     for attempt in range(1, retries + 1):
         try:
@@ -175,7 +188,6 @@ def init_project(force: bool = typer.Option(False, help="Overwrite existing pref
         data_dir / "stocks",
         data_dir / "options",
         data_dir / "earnings",
-        data_dir / "cache",
         strategies_dir,
         runs_dir,
         state_dir,
@@ -193,18 +205,30 @@ def init_project(force: bool = typer.Option(False, help="Overwrite existing pref
 def fetch_data(
     symbol: str,
     start: str = typer.Option(..., help="Start date in YYYY-MM-DD"),
-    end: str = typer.Option(date.today().isoformat(), help="End date in YYYY-MM-DD"),
+    end: str | None = typer.Option(None, help="End date in YYYY-MM-DD (default: today)"),
 ) -> None:
     root = _repo_root()
+    symbol = _validate_symbol(symbol)
     prefs = _load_preferences(root)
     store = DuckDBStore(root / prefs.paths.data_dir)
     adapter = _get_adapter(prefs.defaults.data_adapter)
+    today = date.today()
     start_dt = date.fromisoformat(start)
-    end_dt = date.fromisoformat(end)
+    end_dt = date.fromisoformat(end) if end is not None else today
     bars = _fetch_with_retry(lambda: adapter.get_stock_bars(symbol, start_dt, end_dt))
-    chain = _fetch_with_retry(lambda: adapter.get_option_chain(symbol, end_dt))
     bars_path = store.write_bars(symbol, bars)
-    chain_path = store.write_chain(symbol, chain)
+    chain = pd.DataFrame()
+    chain_path: Path | None = None
+    if end_dt < today:
+        typer.secho(
+            "Warning: skipping options chain fetch for a historical end date; "
+            "yfinance only provides the current chain.",
+            fg=typer.colors.YELLOW,
+            err=True,
+        )
+    else:
+        chain = _fetch_with_retry(lambda: adapter.get_option_chain(symbol, today))
+        chain_path = store.write_chain(symbol, chain)
     markers_path = root / "state" / "fetch_markers.json"
     markers = load_json(markers_path)
     markers[symbol.upper()] = {
@@ -212,7 +236,7 @@ def fetch_data(
         "end": end_dt.isoformat(),
         "bars_path": str(bars_path),
         "options_path": str(chain_path),
-        "updated_at": datetime.now(tz=timezone.utc).isoformat(),
+        "updated_at": datetime.now(tz=UTC).isoformat(),
     }
     save_json(markers_path, markers)
     typer.echo(
@@ -225,14 +249,12 @@ def fetch_data(
 def fetch_earnings(
     symbol: str,
     csv: str | None = typer.Option(None, help="Optional CSV with earnings_date [, timing] columns"),
-    force: bool = typer.Option(False, help="Overwrite existing rows for matching dates (via dedupe keep last)"),
 ) -> None:
     """Fetch or import earnings calendar into data/earnings/<SYMBOL>.parquet."""
-    _ = force  # dedupe keep-last always overwrites matching dates
     root = _repo_root()
+    symbol = _validate_symbol(symbol)
     prefs = _load_preferences(root)
     store = DuckDBStore(root / prefs.paths.data_dir)
-    symbol = symbol.upper()
     if csv:
         path = Path(csv)
         if not path.is_file():
@@ -250,7 +272,7 @@ def fetch_earnings(
         "rows": int(len(frame)),
         "path": str(out_path),
         "source": "csv" if csv else "yfinance",
-        "updated_at": datetime.now(tz=timezone.utc).isoformat(),
+        "updated_at": datetime.now(tz=UTC).isoformat(),
     }
     save_json(markers_path, markers)
     typer.echo(f"Earnings calendar {symbol}: {len(frame)} rows → {out_path}")
@@ -281,16 +303,23 @@ def run_strategy(
     ),
 ) -> None:
     root = _repo_root()
+    symbol = _validate_symbol(symbol)
     prefs = _load_preferences(root)
     strategies_dir = root / prefs.paths.strategies_dir
     validated_strategy = _validate_strategy_name(strategy_name)
     strategy_path = _find_strategy_file(strategies_dir, validated_strategy)
     strategy = _load_strategy(strategy_path)
     store = DuckDBStore(root / prefs.paths.data_dir)
-    symbol = symbol.upper()
     bars = store.read_bars(symbol, start=start, end=end)
     if bars.empty:
         raise typer.BadParameter("No stock bars found. Run `lambdaclass fetch <SYMBOL>` first.")
+    if bars.attrs.get("dividends_backfilled"):
+        typer.secho(
+            f"Warning: {symbol} bars predate dividend capture; dividends are treated as zero. "
+            f"Re-run `lambdaclass fetch {symbol}` to include them.",
+            fg=typer.colors.YELLOW,
+            err=True,
+        )
     bars = bars.sort_values("date").reset_index(drop=True)
     chain_src = (options_source or prefs.defaults.options_chain_source).strip().lower()
     if chain_src not in ("yfinance", "optionsdx"):
@@ -305,16 +334,23 @@ def run_strategy(
     _warn_chain_coverage(options_chain, bars["date"], chain_src)
     # Earnings calendar (full history so days_to/since work at window edges)
     earnings = store.read_earnings(symbol)
-    now = datetime.now()
-    month = ensure_month_dir(root / prefs.paths.strategies_dir, now=now).name
-    cli_overrides = {"start": start, "end": end}
+    month = datetime.now(tz=UTC).strftime("%Y-%m")
+    cli_overrides = {
+        "start": start,
+        "end": end,
+        "symbol": symbol,
+        "options_source": chain_src,
+    }
     snapshot_payload = build_snapshot_payload(prefs, strategy.params, cli_overrides)
     cfg_hash = compute_config_hash(snapshot_payload)
     run_id = _run_id(cfg_hash, root)
     run_dir = root / prefs.paths.runs_dir / month / strategy.name / run_id
     run_result = run_backtest(strategy, bars, options_chain, prefs, earnings=earnings)
     trades_path, equity_path = write_run_outputs(run_result, run_dir)
-    metrics = compute_metrics(run_result.equity_curve)
+    metrics = compute_metrics(
+        run_result.equity_curve,
+        risk_free_rate=prefs.defaults.risk_free_rate,
+    )
     events = compute_earnings_events(
         option_trades=run_result.option_trades,
         earnings=earnings,
@@ -357,7 +393,9 @@ def run_strategy(
         typer.echo(f"Events: {run_dir / 'events.parquet'}")
     rejected = run_result.rejected_orders
     if not rejected.empty:
-        by_reason = ", ".join(f"{reason}={count}" for reason, count in rejected["reason"].value_counts().items())
+        by_reason = ", ".join(
+            f"{reason}={count}" for reason, count in rejected["reason"].value_counts().items()
+        )
         typer.secho(
             f"Warning: {len(rejected)} option order(s) rejected ({by_reason}). "
             f"See {run_dir / 'rejected_orders.csv'}",

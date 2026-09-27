@@ -20,6 +20,8 @@ from lambdaclass.data_adapters.optionsdx_chain_loader import (
     CHAIN_COLUMNS,
     load_normalized_optionsdx_chain,
 )
+from lambdaclass.reporting import metrics as reporting_metrics
+from lambdaclass.symbols import validate_symbol
 
 ARTIFACT_NAMES = ("metrics.json", "equity.parquet", "trades.csv", "config.snapshot.toml")
 
@@ -107,6 +109,13 @@ def _empty_option_trades() -> pd.DataFrame:
     )
 
 
+def _optional_snapshot_value(value: Any) -> str:
+    if value is None:
+        return ""
+    text = str(value).strip()
+    return "" if text.lower() == "none" else text
+
+
 def load_run(run_dir: Path) -> RunBundle:
     run_dir = Path(run_dir).resolve()
     if not _is_run_dir(run_dir):
@@ -136,18 +145,20 @@ def load_run(run_dir: Path) -> RunBundle:
 
     cli_overrides = snapshot.get("cli_overrides", {}) if isinstance(snapshot, dict) else {}
     snap_meta = snapshot.get("meta", {}) if isinstance(snapshot, dict) else {}
+    snapshot_start = _optional_snapshot_value(cli_overrides.get("start"))
+    snapshot_end = _optional_snapshot_value(cli_overrides.get("end"))
 
     if not equity_curve.empty:
         equity_dates = equity_curve["date"].astype(str)
-        start = str(cli_overrides.get("start") or equity_dates.iloc[0])
-        end = str(cli_overrides.get("end") or equity_dates.iloc[-1])
+        start = snapshot_start or str(equity_dates.iloc[0])
+        end = snapshot_end or str(equity_dates.iloc[-1])
     else:
-        start = str(cli_overrides.get("start") or "")
-        end = str(cli_overrides.get("end") or "")
+        start = snapshot_start
+        end = snapshot_end
 
-    symbol = ""
+    symbol = _optional_snapshot_value(cli_overrides.get("symbol"))
     log_path = run_dir / "run.log"
-    if log_path.is_file():
+    if not symbol and log_path.is_file():
         for line in log_path.read_text(encoding="utf-8").splitlines():
             if line.startswith("symbol="):
                 symbol = line.split("=", 1)[1].strip()
@@ -171,7 +182,8 @@ def load_run(run_dir: Path) -> RunBundle:
 
 def load_bars(data_dir: Path, symbol: str, start: str | None = None, end: str | None = None) -> pd.DataFrame:
     """Read ``data/stocks/<SYMBOL>.parquet`` via DuckDB. Empty frame if missing."""
-    bars_path = Path(data_dir) / "stocks" / f"{symbol.upper()}.parquet"
+    symbol = validate_symbol(symbol)
+    bars_path = Path(data_dir) / "stocks" / f"{symbol}.parquet"
     if not bars_path.is_file():
         return pd.DataFrame()
     query = "SELECT * FROM read_parquet(?)"
@@ -192,6 +204,7 @@ def load_bars(data_dir: Path, symbol: str, start: str | None = None, end: str | 
 
 def load_chain(normalized_root: Path, symbol: str, dates: list[str]) -> pd.DataFrame:
     """Filter normalized OptionsDX Parquet to ``dates`` (YYYY-MM-DD) for ``symbol``."""
+    symbol = validate_symbol(symbol)
     if not dates:
         return pd.DataFrame(columns=CHAIN_COLUMNS)
     return load_normalized_optionsdx_chain(Path(normalized_root), symbol, dates)
@@ -220,7 +233,8 @@ def chain_spot_estimate(bars: pd.DataFrame, asof: str) -> float:
 
 def load_earnings(data_dir: Path, symbol: str) -> pd.DataFrame:
     """Read ``data/earnings/<SYMBOL>.parquet``; empty frame if missing."""
-    path = Path(data_dir) / "earnings" / f"{symbol.upper()}.parquet"
+    symbol = validate_symbol(symbol)
+    path = Path(data_dir) / "earnings" / f"{symbol}.parquet"
     if not path.is_file():
         return pd.DataFrame(columns=["symbol", "earnings_date", "timing", "source", "fetched_at"])
     return pd.read_parquet(path)
@@ -251,9 +265,7 @@ def aggregate_metrics(runs_root: Path, run_dirs: list[Path] | None = None) -> pd
             if not metrics_path.is_file():
                 continue
             try:
-                df = con.execute(
-                    "SELECT * FROM read_json_auto(?)", [str(metrics_path)]
-                ).df()
+                df = con.execute("SELECT * FROM read_json_auto(?)", [str(metrics_path)]).df()
             except duckdb.Error:
                 continue
             if df.empty:
@@ -265,55 +277,24 @@ def aggregate_metrics(runs_root: Path, run_dirs: list[Path] | None = None) -> pd
             rows.append(row)
     if not rows:
         return pd.DataFrame()
-    columns = ["strategy", "run_id"] + sorted(
-        {k for r in rows for k in r.keys()} - {"strategy", "run_id", "run_dir"}
-    ) + ["run_dir"]
+    columns = (
+        ["strategy", "run_id"]
+        + sorted({k for r in rows for k in r} - {"strategy", "run_id", "run_dir"})
+        + ["run_dir"]
+    )
     return pd.DataFrame(rows)[columns]
 
 
 def num_trades(trades: pd.DataFrame) -> int:
-    return 0 if trades is None or trades.empty else int(len(trades))
+    """Compatibility wrapper for the shared reporting metric."""
+    return reporting_metrics.num_trades(trades)
 
 
 def avg_holding_days(trades: pd.DataFrame) -> float:
-    """Average days between paired buy/sell rows in chronological order."""
-    if trades is None or trades.empty:
-        return 0.0
-    if "date" not in trades.columns or "action" not in trades.columns:
-        return 0.0
-    df = trades.copy()
-    df["date"] = pd.to_datetime(df["date"], errors="coerce")
-    df = df.dropna(subset=["date"]).sort_values("date").reset_index(drop=True)
-    holding: list[float] = []
-    last_buy: pd.Timestamp | None = None
-    for _, row in df.iterrows():
-        action = str(row["action"]).lower()
-        if action == "buy" and last_buy is None:
-            last_buy = row["date"]
-        elif action == "sell" and last_buy is not None:
-            holding.append((row["date"] - last_buy).days)
-            last_buy = None
-    return float(sum(holding) / len(holding)) if holding else 0.0
+    """Compatibility wrapper for the shared reporting metric."""
+    return reporting_metrics.avg_holding_days(trades)
 
 
 def win_rate_per_trade(trades: pd.DataFrame) -> float:
-    """Fraction of buy/sell pairs whose sell price > buy price."""
-    if trades is None or trades.empty:
-        return 0.0
-    if "action" not in trades.columns or "price" not in trades.columns:
-        return 0.0
-    df = trades.copy().reset_index(drop=True)
-    wins = 0
-    pairs = 0
-    last_buy: float | None = None
-    for _, row in df.iterrows():
-        action = str(row["action"]).lower()
-        price = float(row.get("price") or 0.0)
-        if action == "buy" and last_buy is None:
-            last_buy = price
-        elif action == "sell" and last_buy is not None:
-            pairs += 1
-            if price > last_buy:
-                wins += 1
-            last_buy = None
-    return float(wins / pairs) if pairs else 0.0
+    """Compatibility wrapper for the shared reporting metric."""
+    return reporting_metrics.win_rate_per_trade(trades)

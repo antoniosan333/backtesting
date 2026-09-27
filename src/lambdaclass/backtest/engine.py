@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
+from types import MappingProxyType
 from typing import Any
 
 import pandas as pd
@@ -12,11 +13,17 @@ from lambdaclass.earnings.calendar import context_fields
 from lambdaclass.options.pricing import (
     black_scholes_price,
     intrinsic_value,
+    numeric_value,
     parse_option_date,
     safe_option_mid,
     years_between,
 )
-from lambdaclass.strategies.base import OptionLeg, Strategy, StrategyContext
+from lambdaclass.strategies.base import (
+    OpenOptionView,
+    OptionLeg,
+    Strategy,
+    StrategyContext,
+)
 
 
 @dataclass
@@ -52,10 +59,25 @@ def _stock_commission(shares: int, prefs: Preferences) -> float:
 def _chain_row_for_contract(chain: pd.DataFrame | None, contract_symbol: str) -> pd.Series | None:
     if chain is None or chain.empty:
         return None
+    if chain.index.name == "contract_symbol":
+        try:
+            row = chain.loc[contract_symbol]
+        except KeyError:
+            return None
+        return row.iloc[0] if isinstance(row, pd.DataFrame) else row
     matches = chain[chain["contract_symbol"] == contract_symbol]
     if matches.empty:
         return None
     return matches.iloc[0]
+
+
+def _prepare_chain_by_date(options_chain: pd.DataFrame) -> dict[str, pd.DataFrame]:
+    if options_chain.empty:
+        return {}
+    return {
+        str(key): frame.reset_index(drop=True).set_index("contract_symbol", drop=False)
+        for key, frame in options_chain.groupby("asof")
+    }
 
 
 @dataclass
@@ -80,7 +102,7 @@ def _fill_quote(chain: pd.DataFrame | None, leg: OptionLeg) -> FillQuote:
     mid = float(safe_option_mid(row))
     if not mid > 0.0:
         return FillQuote(reject_reason="non_positive_mid")
-    iv = float(pd.to_numeric(row.get("implied_volatility"), errors="coerce") or 0.0)
+    iv = numeric_value(row.get("implied_volatility"))
     return FillQuote(mid=mid, iv=max(iv, 1e-6))
 
 
@@ -96,7 +118,7 @@ def _option_mark(
     row = _chain_row_for_contract(chain, contract_symbol)
     if row is not None:
         mid = float(safe_option_mid(row))
-        iv = float(pd.to_numeric(row.get("implied_volatility"), errors="coerce") or 0.0)
+        iv = numeric_value(row.get("implied_volatility"))
         if iv > 0:
             pos.last_iv = max(iv, 1e-6)
         if mid > 0:
@@ -146,8 +168,7 @@ def _apply_option_fill(
     elif existing.quantity * qty < 0 and abs(qty) >= abs(existing.quantity):
         # Full close (and optional reverse)
         action = "close"
-        closed = existing.quantity
-        remaining = qty + closed  # e.g. existing +1, leg -1 → 0; existing +1, leg -2 → -1
+        remaining = qty + existing.quantity
         del open_options[leg.contract_symbol]
         if remaining != 0:
             open_options[leg.contract_symbol] = OpenOption(
@@ -158,8 +179,7 @@ def _apply_option_fill(
                 avg_entry_mid=mid,
                 last_iv=iv,
             )
-            action = "close"
-        _ = closed
+            action = "reverse"
     elif existing.quantity * qty < 0:
         # Partial close
         action = "close"
@@ -170,9 +190,9 @@ def _apply_option_fill(
         # Add to same-direction position — average entry mid
         total_qty = existing.quantity + qty
         if total_qty != 0:
-            existing.avg_entry_mid = (
-                existing.avg_entry_mid * abs(existing.quantity) + mid * abs(qty)
-            ) / abs(total_qty)
+            existing.avg_entry_mid = (existing.avg_entry_mid * abs(existing.quantity) + mid * abs(qty)) / abs(
+                total_qty
+            )
         existing.quantity = total_qty
         existing.last_iv = iv
 
@@ -195,6 +215,89 @@ def _apply_option_fill(
     return cash
 
 
+def _rejection_row(date_key: str, leg: OptionLeg, reason: str) -> dict[str, Any]:
+    return {
+        "date": date_key,
+        "contract_symbol": leg.contract_symbol,
+        "side": leg.side,
+        "strike": leg.strike,
+        "expiry": leg.expiry,
+        "quantity": int(leg.quantity),
+        "reason": reason,
+    }
+
+
+def _open_option_views(
+    open_options: dict[str, OpenOption],
+) -> MappingProxyType[str, OpenOptionView]:
+    return MappingProxyType(
+        {
+            symbol: OpenOptionView(
+                side=position.side,
+                strike=position.strike,
+                expiry=position.expiry,
+                quantity=position.quantity,
+                avg_entry_mid=position.avg_entry_mid,
+            )
+            for symbol, position in open_options.items()
+        }
+    )
+
+
+def _execute_option_structure(
+    *,
+    legs: list[OptionLeg],
+    chain: pd.DataFrame | None,
+    open_options: dict[str, OpenOption],
+    cash: float,
+    preferences: Preferences,
+    date_key: str,
+    option_trades: list[dict[str, Any]],
+    rejected_orders: list[dict[str, Any]],
+) -> float:
+    """Fill all legs or reject the complete structure."""
+    rejection_reason: str | None = None
+    quotes: list[FillQuote] = []
+    for leg in legs:
+        if leg.reduce_only:
+            existing = open_options.get(leg.contract_symbol)
+            if existing is None or existing.quantity * int(leg.quantity) >= 0:
+                rejection_reason = "no_open_position"
+                break
+        quote = _fill_quote(chain, leg)
+        quotes.append(quote)
+        if quote.reject_reason is not None:
+            rejection_reason = quote.reject_reason
+            break
+
+    new_symbols = {
+        leg.contract_symbol for leg in legs if leg.contract_symbol not in open_options and not leg.reduce_only
+    }
+    if (
+        rejection_reason is None
+        and len(open_options) + len(new_symbols) > preferences.risk.max_open_positions
+    ):
+        rejection_reason = "risk_max_open_positions"
+
+    if rejection_reason is not None:
+        reason = f"structure_rejected:{rejection_reason}" if len(legs) > 1 else rejection_reason
+        rejected_orders.extend(_rejection_row(date_key, leg, reason) for leg in legs)
+        return cash
+
+    for leg, quote in zip(legs, quotes, strict=True):
+        cash = _apply_option_fill(
+            open_options,
+            leg,
+            mid=quote.mid,
+            iv=quote.iv,
+            cash=cash,
+            prefs=preferences,
+            date_key=date_key,
+            option_trades=option_trades,
+        )
+    return cash
+
+
 def run_backtest(
     strategy: Strategy,
     bars: pd.DataFrame,
@@ -203,14 +306,7 @@ def run_backtest(
     earnings: pd.DataFrame | None = None,
 ) -> RunResult:
     bars_sorted = bars.sort_values("date").reset_index(drop=True)
-    chain_by_date = (
-        {
-            str(key): frame.reset_index(drop=True)
-            for key, frame in options_chain.groupby("asof")
-        }
-        if not options_chain.empty
-        else {}
-    )
+    chain_by_date = _prepare_chain_by_date(options_chain)
     earnings_df = earnings if earnings is not None else pd.DataFrame()
     cash = float(preferences.defaults.starting_capital)
     position = 0
@@ -220,8 +316,12 @@ def run_backtest(
     rejected_orders: list[dict[str, Any]] = []
     equity_records: list[dict[str, Any]] = []
     r = float(preferences.defaults.risk_free_rate)
+    last_fills: tuple[dict[str, Any], ...] = ()
+    last_rejections: tuple[dict[str, Any], ...] = ()
 
     for _, row in bars_sorted.iterrows():
+        fills_before_bar = len(option_trades)
+        rejections_before_bar = len(rejected_orders)
         date_key = str(row["date"])
         bar_date = parse_option_date(date_key)
         chain = chain_by_date.get(date_key)
@@ -229,9 +329,7 @@ def run_backtest(
         earn_ctx = context_fields(date_key, earnings_df)
 
         # Settle expired options before strategy decisions
-        expired = [
-            sym for sym, pos in open_options.items() if bar_date >= pos.expiry
-        ]
+        expired = [sym for sym, pos in open_options.items() if bar_date >= pos.expiry]
         for sym in expired:
             pos = open_options.pop(sym)
             settlement = pos.quantity * 100.0 * intrinsic_value(pos.side, pos.strike, price)
@@ -253,6 +351,19 @@ def run_backtest(
                 }
             )
 
+        dividend = numeric_value(row.get("dividends"))
+        if dividend and position:
+            cash += position * dividend
+            trades.append(
+                {
+                    "date": date_key,
+                    "action": "dividend",
+                    "quantity": position,
+                    "price": dividend,
+                    "cash_after": cash,
+                }
+            )
+
         context = StrategyContext(
             row=row,
             cash=cash,
@@ -262,23 +373,44 @@ def run_backtest(
             days_since_last_earnings=earn_ctx["days_since_last_earnings"],
             next_earnings_date=earn_ctx["next_earnings_date"],
             earnings_timing=earn_ctx["earnings_timing"],
+            open_options=_open_option_views(open_options),
+            last_fills=last_fills,
+            last_rejections=last_rejections,
         )
         decision = strategy.on_bar(context)
         qty = int(decision.quantity)
         if decision.action == "buy" and qty > 0:
             total_cost = (price * qty) + _stock_commission(qty, preferences)
             slippage = price * (preferences.defaults.slippage_bps / 10_000.0) * qty
-            cash -= total_cost + slippage
-            position += qty
-            trades.append(
-                {
-                    "date": date_key,
-                    "action": "buy",
-                    "quantity": qty,
-                    "price": price,
-                    "cash_after": cash,
-                }
-            )
+            outlay = total_cost + slippage
+            current_equity = cash + position * price
+            projected_notional = (position + qty) * price
+            reason: str | None = None
+            if projected_notional > current_equity * preferences.risk.max_position_pct:
+                reason = "risk_max_position_pct"
+            elif not preferences.defaults.allow_negative_cash and outlay > cash:
+                reason = "insufficient_cash"
+            if reason is not None:
+                rejected_orders.append(
+                    {
+                        "date": date_key,
+                        "instrument": "stock",
+                        "quantity": qty,
+                        "reason": reason,
+                    }
+                )
+            else:
+                cash -= outlay
+                position += qty
+                trades.append(
+                    {
+                        "date": date_key,
+                        "action": "buy",
+                        "quantity": qty,
+                        "price": price,
+                        "cash_after": cash,
+                    }
+                )
         elif decision.action == "sell" and qty > 0 and position > 0:
             executed = min(qty, position)
             proceeds = (price * executed) - _stock_commission(executed, preferences)
@@ -296,31 +428,16 @@ def run_backtest(
             )
 
         if decision.option_legs:
-            for leg in decision.option_legs:
-                quote = _fill_quote(chain, leg)
-                if quote.reject_reason is not None:
-                    rejected_orders.append(
-                        {
-                            "date": date_key,
-                            "contract_symbol": leg.contract_symbol,
-                            "side": leg.side,
-                            "strike": leg.strike,
-                            "expiry": leg.expiry,
-                            "quantity": int(leg.quantity),
-                            "reason": quote.reject_reason,
-                        }
-                    )
-                    continue
-                cash = _apply_option_fill(
-                    open_options,
-                    leg,
-                    mid=quote.mid,
-                    iv=quote.iv,
-                    cash=cash,
-                    prefs=preferences,
-                    date_key=date_key,
-                    option_trades=option_trades,
-                )
+            cash = _execute_option_structure(
+                legs=decision.option_legs,
+                chain=chain,
+                open_options=open_options,
+                cash=cash,
+                preferences=preferences,
+                date_key=date_key,
+                option_trades=option_trades,
+                rejected_orders=rejected_orders,
+            )
 
         options_mtm = 0.0
         for sym, pos in open_options.items():
@@ -345,6 +462,8 @@ def run_backtest(
                 "equity": equity,
             }
         )
+        last_fills = tuple(option_trades[fills_before_bar:])
+        last_rejections = tuple(rejected_orders[rejections_before_bar:])
 
     return RunResult(
         trades=pd.DataFrame(trades),

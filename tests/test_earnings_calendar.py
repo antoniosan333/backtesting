@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
 from pathlib import Path
 
 import pandas as pd
@@ -55,6 +56,40 @@ def test_context_fields_empty() -> None:
     ctx = cal.context_fields("2026-01-01", cal.empty_earnings_frame())
     assert ctx["days_to_next_earnings"] is None
     assert ctx["next_earnings_date"] is None
+
+
+def test_indexed_calendar_matches_public_helpers_across_dates_and_timings() -> None:
+    earnings = _earn(
+        [
+            ("2026-05-10", "AMC"),
+            ("2026-02-10", "AMC"),
+            ("2026-02-10", "BMO"),
+            ("2026-08-15", "unknown"),
+        ]
+    )
+    calendar = cal.EarningsCalendar(earnings)
+
+    day = cal.parse_date("2026-02-08")
+    through = cal.parse_date("2026-08-17")
+    while day <= through:
+        iso = day.isoformat()
+        assert calendar.next_earnings_row(iso) == cal.next_earnings_row(iso, earnings)
+        assert calendar.previous_earnings_row(iso) == cal.previous_earnings_row(iso, earnings)
+        assert calendar.days_to_next_earnings(iso) == cal.days_to_next_earnings(iso, earnings)
+        assert calendar.days_since_last_earnings(iso) == cal.days_since_last_earnings(iso, earnings)
+        assert calendar.context_fields(iso) == cal.context_fields(iso, earnings)
+        day += timedelta(days=1)
+
+
+def test_indexed_calendar_is_independent_of_later_frame_mutation() -> None:
+    earnings = _earn([("2026-02-10", "AMC")])
+    calendar = cal.EarningsCalendar(earnings)
+    earnings.loc[0, "earnings_date"] = "2030-01-01"
+
+    assert calendar.next_earnings_row("2026-02-01") == {
+        "earnings_date": "2026-02-10",
+        "timing": "AMC",
+    }
 
 
 def test_normalize_csv_fixture() -> None:

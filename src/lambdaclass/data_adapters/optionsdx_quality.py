@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 import pandas as pd
@@ -10,7 +10,7 @@ import pandas as pd
 def _date_from_unix(quote_unix: int | None) -> str | None:
     if quote_unix is None:
         return None
-    return datetime.fromtimestamp(quote_unix, tz=timezone.utc).strftime("%Y-%m-%d")
+    return datetime.fromtimestamp(quote_unix, tz=UTC).strftime("%Y-%m-%d")
 
 
 def apply_quality_rules(row: dict[str, Any]) -> dict[str, Any]:
@@ -112,7 +112,9 @@ class FileQualityReport:
         }
 
 
-def summarize_frame(df: pd.DataFrame, schema: str, raw_lines: int, parse_error_count: int, source: str) -> FileQualityReport:
+def summarize_frame(
+    df: pd.DataFrame, schema: str, raw_lines: int, parse_error_count: int, source: str
+) -> FileQualityReport:
     rep = FileQualityReport(
         source_path=source,
         schema=schema,

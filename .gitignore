@@ -5,9 +5,9 @@
 state/*.json
 
 # Local data and outputs (large / machine-specific)
-data/
-runs/
-zRawData/
+/data/
+/runs/
+/zRawData/
 
 # Track weekly options universe reference files
 !data/weekly_options_universe.csv

@@ -8,6 +8,13 @@ Implemented: `yfinance_adapter.py` (`yfinance`). CLI resolves adapter name from 
 
 Also: `get_earnings_dates(symbol, limit=…)` → raw `earnings_date` / `timing` frame (empty if unavailable). Normalize via `lambdaclass.earnings.calendar.normalize_earnings_frame` before `DuckDBStore.write_earnings`. CLI: `fetch-earnings`.
 
+`get_earnings_dates` → `YAHOO_EARNINGS_COLUMNS` via `parse_yahoo_earnings_dates` (needs `lxml`; `limit` ≤ 100). Before 09:30 New York → `BMO`, ≥ 16:00 → `AMC`, in-session → `unknown`; exactly midnight UTC means time unknown (keep the UTC date). Errors propagate for retry.
+
+## Earnings universe sources ([ADR-0010](../../../docs/decisions/0010-weekly-options-earnings-universe.md))
+
+- `cboe_weeklys.py`: `parse_cboe_weeklys` keeps only the ETP (`etp`) and Equity (`equity`) sections of the Cboe "Available Weeklys" CSV, maps `BRK.B` → `BRK-B`, drops symbols failing `SYMBOL_PATTERN`.
+- `nasdaq_earnings.py`: `NasdaqEarningsAdapter.get_earnings_day(day)` → `EARNINGS_DAY_COLUMNS` (EPS actual/estimate, surprise %, estimates, market cap). `time-pre-market` → `BMO`, `time-after-hours` → `AMC`; past days are always `time-not-supplied` → `unknown`. Money strings like `($0.09)` parse to negatives via `parse_money`.
+
 ## OptionsDX pipeline
 
 Order: **parse** (`optionsdx_parser.py`) → **quality** (`optionsdx_quality.py`) → **normalize** (`optionsdx_normalize.py`, `run_normalize`).

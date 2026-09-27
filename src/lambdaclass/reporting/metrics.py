@@ -110,12 +110,11 @@ def avg_holding_days(trades: pd.DataFrame) -> float:
     frame = frame.dropna(subset=["date"]).sort_values("date").reset_index(drop=True)
     holding: list[float] = []
     last_buy: pd.Timestamp | None = None
-    for _, row in frame.iterrows():
-        action = str(row["action"]).lower()
+    for action, when in zip(frame["action"].astype(str).str.lower(), frame["date"], strict=True):
         if action == "buy" and last_buy is None:
-            last_buy = row["date"]
+            last_buy = when
         elif action == "sell" and last_buy is not None:
-            holding.append((row["date"] - last_buy).days)
+            holding.append((when - last_buy).days)
             last_buy = None
     return float(sum(holding) / len(holding)) if holding else 0.0
 
@@ -126,13 +125,12 @@ def win_rate_per_trade(trades: pd.DataFrame) -> float:
         return 0.0
     if "action" not in trades.columns or "price" not in trades.columns:
         return 0.0
-    frame = trades.reset_index(drop=True)
     wins = 0
     pairs = 0
     last_buy: float | None = None
-    for _, row in frame.iterrows():
-        action = str(row["action"]).lower()
-        price = float(row.get("price") or 0.0)
+    actions = trades["action"].astype(str).str.lower()
+    prices = pd.to_numeric(trades["price"], errors="coerce").fillna(0.0).astype(float)
+    for action, price in zip(actions, prices, strict=True):
         if action == "buy" and last_buy is None:
             last_buy = price
         elif action == "sell" and last_buy is not None:

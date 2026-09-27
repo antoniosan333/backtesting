@@ -5,7 +5,7 @@ import json
 import os
 import tomllib
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -73,6 +73,13 @@ class DefaultsConfig(BaseModel):
     slippage_bps: float = 2.0
     risk_free_rate: float = 0.04
     allow_negative_cash: bool = False
+    fill_timing: Literal["same_close", "next_open"] = Field(
+        default="same_close",
+        description=(
+            "same_close: fill at the decision bar's close / chain mid (look-ahead prone); "
+            "next_open: fill stock at the next bar's open and options at the next bar's chain mid"
+        ),
+    )
 
 
 class PathsConfig(BaseModel):
@@ -89,6 +96,8 @@ class ReportingConfig(BaseModel):
 class RiskConfig(BaseModel):
     max_position_pct: float = Field(default=0.10, ge=0.0)
     max_open_positions: int = Field(default=5, ge=1)
+    allow_short_stock: bool = False
+    short_borrow_rate: float = Field(default=0.0, ge=0.0, description="Annual rate on short notional")
 
 
 class OptionsDXNormalizeConfig(BaseModel):
@@ -176,3 +185,13 @@ def compute_config_hash(snapshot_payload: dict[str, Any]) -> str:
 
 
 DEFAULT_PREFERENCES = Preferences()
+
+
+def preferences_path(root: Path) -> Path:
+    return root / "config" / "preferences.toml"
+
+
+def load_project_preferences(root: Path) -> Preferences:
+    """Preferences for the project at ``root``, or the defaults before ``init``."""
+    path = preferences_path(root)
+    return Preferences.load(path) if path.exists() else DEFAULT_PREFERENCES

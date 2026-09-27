@@ -11,13 +11,16 @@ Stock and options backtesting: Typer CLI, TOML preferences, local Parquet + Duck
 | Preferences | `config/preferences.toml` (created by `init`) |
 | Strategies (monthly) | `strategies/<YYYY-MM>/<name>.py` |
 | Fetched data | `data/stocks/`, `data/options/`, `data/earnings/` |
+| Weekly-options universe | `data/universe/weekly_options.parquet` (+ `snapshots/weekly_options/<date>.parquet`) |
+| Earnings calendar cache / events | `data/earnings/calendar/<YYYY>/<date>.parquet`, `data/earnings/events/weekly_options[_summary].parquet` |
 | OptionsDX normalized | `data/optionsdx/normalized/<SYMBOL>/<YYYY>/<MM>/` |
 | OptionsDX reports | `data/optionsdx/reports/files/`, `data/optionsdx/reports/runs/` |
 | Backtest runs | `runs/<YYYY-MM>/<strategy>/<run_id>/` |
+| Sweep summaries | `runs/<YYYY-MM>/<strategy>/_sweeps/<sweep_id>/` (`sweep.parquet`, `sweep.json`) |
 | App state JSON | `state/` (e.g. `fetch_markers.json`, `optionsdx_normalize_state.json`) |
 | Raw OptionsDX | `zRawData/optionsdx/*.txt` |
 | **Weekly options universe** | `data/weekly_options_universe.csv` (704 symbols), `data/weekly_options_stocks.csv` (626 stocks), `data/weekly_options_universe.json`, `data/weekly_options_universe_README.md` |
-| Tests | `tests/` (fixtures `tests/fixtures/optionsdx/`) |
+| Tests | `tests/` (fixtures `tests/fixtures/optionsdx/`, `tests/fixtures/cboe/`, `tests/fixtures/nasdaq/`) |
 
 Deeper package notes: [data_adapters](src/lambdaclass/data_adapters/AGENTS.md), [storage](src/lambdaclass/storage/AGENTS.md), [strategies](src/lambdaclass/strategies/AGENTS.md), [backtest](src/lambdaclass/backtest/AGENTS.md), [reporting](src/lambdaclass/reporting/AGENTS.md).
 
@@ -32,8 +35,14 @@ All via `lambdaclass` (Python ≥ 3.11, `pip install -e ".[dev]"`).
 | `init` | Create dirs + default `config/preferences.toml` (`--force` overwrites prefs) |
 | `fetch SYMBOL --start YYYY-MM-DD [--end]` | yfinance → Parquet append + dedupe; updates `state/fetch_markers.json` |
 | `fetch-earnings SYMBOL [--csv PATH]` | Earnings calendar → `data/earnings/<SYMBOL>.parquet` (yfinance or CSV); `state/earnings_fetch_markers.json` |
+| `universe fetch-weeklys [--csv]` / `universe show` | Cboe weekly-options list (equity + ETP) → universe Parquet + dated snapshot |
+| `universe fetch-yahoo-earnings [--category] [--max-age-days]` | Yahoo earnings history (≤100 quarters, announcement time → BMO/AMC) → `data/earnings/yahoo/<SYMBOL>.parquet` |
+| `universe fetch-earnings --start [--end] [--refresh-days]` | Nasdaq earnings calendar per day (cached; EPS, surprise, upcoming timing) |
+| `universe fetch-bars --start [--end] [--category]` | yfinance bars for every universe symbol (skips covered windows) |
+| `universe build-events [--category] [--min-events]` | Merge Yahoo + Nasdaq, build reaction events + per-symbol summary, publish `data/earnings/<SYMBOL>.parquet`; gap inference only where no vendor timing ([ADR-0010](docs/decisions/0010-weekly-options-earnings-universe.md)) |
 | `new-strategy NAME` | Scaffold under current month folder |
-| `run STRATEGY [--symbol] [--start/--end] [--options-source …] [--fail-on-rejected-orders]` | Backtest; `--options-source yfinance` or `optionsdx` (default: `[defaults].options_chain_source`) |
+| `run STRATEGY [--symbol] [--start/--end] [--options-source …] [--param key=value …] [--fail-on-rejected-orders]` | Backtest; `--options-source yfinance` or `optionsdx` (default: `[defaults].options_chain_source`); `--param` overrides `StrategyImpl.params` |
+| `sweep STRATEGY --grid key=a,b [--grid key=start:stop:step] [--param …] [--metric] [--jobs N] [--max-combos]` | Run every grid combination as a normal run + write a sweep summary ([ADR-0009](docs/decisions/0009-parameter-sweeps.md)) |
 | `list-runs [--limit]` | Latest runs from `metrics.json` paths |
 | `compare STRATEGY [--limit]` | Compare metrics for a strategy |
 | `dashboard [--host] [--port] [--headless/--no-headless]` | Streamlit read-only review UI (`streamlit run` the packaged `reporting/dashboard/app.py`) |
@@ -64,10 +73,11 @@ All via `lambdaclass` (Python ≥ 3.11, `pip install -e ".[dev]"`).
 | OptionsDX pipeline | `src/lambdaclass/data_adapters/AGENTS.md` |
 | Parquet I/O | `src/lambdaclass/storage/AGENTS.md` |
 | Strategy API | `src/lambdaclass/strategies/base.py` |
-| Run loop + outputs | `src/lambdaclass/backtest/engine.py` |
+| Run loop + outputs | `src/lambdaclass/backtest/engine.py`; orchestration (load inputs, write run dir) in `src/lambdaclass/runs/runner.py` |
 | BSM / Greeks / mid quotes | `src/lambdaclass/options/pricing.py` |
 | Option presets / payoff curves | `src/lambdaclass/options/presets.py`, `src/lambdaclass/options/payoff.py` |
 | Earnings calendar helpers | `src/lambdaclass/earnings/calendar.py` (`EarningsCalendar`) |
+| Earnings universe / reaction events | `src/lambdaclass/cli_universe.py`, `src/lambdaclass/earnings/history.py`, `src/lambdaclass/earnings/events.py` |
 | Metrics / HTML report / dashboard | `src/lambdaclass/reporting/` (`reporting/dashboard/` for Streamlit) |
 | **Weekly options universe (earnings symbols)** | `data/weekly_options_universe.csv` or `data/weekly_options_stocks.csv` |
 
@@ -104,6 +114,7 @@ The Cursor continual-learning stop-hook may append high-signal, durable facts be
 - Root `.gitignore` keeps `.cursor/hooks/state/`, `data/`, `runs/`, `zRawData/`, and `state/*.json` local-only; exceptions: `data/weekly_options_*.csv`, `data/weekly_options_*.json`, and `data/weekly_options_universe_README.md` are tracked (narrow un-ignore). Commit small OptionsDX samples under `tests/fixtures/optionsdx/` unless you add a narrow un-ignore.
 - Streamlit dashboard defaults to loopback (`127.0.0.1`); to open it from another device on the same LAN use `lambdaclass dashboard --host 0.0.0.0`, browse to `http://<this-PC-LAN-IPv4>:<port>`, and allow the port through Windows Firewall if needed—`0.0.0.0` exposes the UI to the whole LAN.
 - GitHub CI runs Ruff, mypy, and pytest on Python 3.11–3.13; it does not normalize OptionsDX data or enforce data-rate gates on runners.
+- yfinance `get_earnings_dates` needs `lxml` (a dependency since ADR-0010) and caps `limit` at 100; a midnight-UTC timestamp means the time of day is unknown.
 - `py-vollib` on PyPI is now a deprecated alias that redirects to `vollib`; prefer `vollib` when touching `pyproject.toml` or the pricing imports.
 - py-vollib/vollib analytical Greeks: `theta` is per calendar day (already ÷365) and `vega`/`rho` are per 1-percentage-point move (÷100) — do not label or rescale them as annual/per-unit values.
 - Backtest engine options accounting ([ADR-0005](docs/decisions/0005-options-engine-accounting.md)): open ledger, chain/BSM marks, intrinsic expiry settlement, `option_trades.csv` in run dirs; equity includes `options_mtm`.

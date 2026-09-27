@@ -7,7 +7,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from lambdaclass.backtest.engine import _prepare_chain_by_date, run_backtest, write_run_outputs
+from lambdaclass.backtest.engine import prepare_chain_by_date, run_backtest, write_run_outputs
 from lambdaclass.config import DEFAULT_PREFERENCES, Preferences
 from lambdaclass.strategies.base import OptionLeg, Strategy, StrategyContext, StrategyDecision
 
@@ -65,7 +65,7 @@ def test_prepare_chain_indexes_contracts_by_date() -> None:
         ]
     )
 
-    prepared = _prepare_chain_by_date(chain)
+    prepared = prepare_chain_by_date(chain)
 
     assert prepared["2026-01-01"].index.name == "contract_symbol"
     assert prepared["2026-01-01"].loc["ZZZ_C100", "strike"] == 100.0
@@ -184,6 +184,16 @@ def test_long_call_marked_then_settled_itm(tmp_path: Path) -> None:
 
     write_run_outputs(result, tmp_path)
     assert (tmp_path / "option_trades.csv").is_file()
+
+    shared = run_backtest(
+        LongCallOnce(contract, expiry, 100.0),
+        bars,
+        pd.DataFrame(),
+        prefs,
+        chain_by_date=prepare_chain_by_date(chain),
+    )
+    assert shared.equity_curve.equals(result.equity_curve)
+    assert shared.option_trades.equals(result.option_trades)
 
 
 def test_short_put_settled_otm_keeps_premium() -> None:

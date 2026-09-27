@@ -37,4 +37,4 @@ orders artifact.
   structures and unconstrained positions could previously affect P&L.
 - Fills still use the completed bar's close/chain mid. This is a deliberate
   research simplification and may introduce look-ahead bias; next-bar execution
-  remains future work.
+  is available via `fill_timing = "next_open"` ([ADR-0008](0008-fill-timing-dividends-and-short-stock.md)).

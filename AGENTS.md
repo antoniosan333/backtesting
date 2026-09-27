@@ -16,6 +16,7 @@ Stock and options backtesting: Typer CLI, TOML preferences, local Parquet + Duck
 | Backtest runs | `runs/<YYYY-MM>/<strategy>/<run_id>/` |
 | App state JSON | `state/` (e.g. `fetch_markers.json`, `optionsdx_normalize_state.json`) |
 | Raw OptionsDX | `zRawData/optionsdx/*.txt` |
+| **Weekly options universe** | `data/weekly_options_universe.csv` (704 symbols), `data/weekly_options_stocks.csv` (626 stocks), `data/weekly_options_universe.json`, `data/weekly_options_universe_README.md` |
 | Tests | `tests/` (fixtures `tests/fixtures/optionsdx/`) |
 
 Deeper package notes: [data_adapters](src/lambdaclass/data_adapters/AGENTS.md), [storage](src/lambdaclass/storage/AGENTS.md), [strategies](src/lambdaclass/strategies/AGENTS.md), [backtest](src/lambdaclass/backtest/AGENTS.md), [reporting](src/lambdaclass/reporting/AGENTS.md).
@@ -67,6 +68,30 @@ All via `lambdaclass` (Python ≥ 3.11, `pip install -e ".[dev]"`).
 | BSM / Greeks / mid quotes | `src/lambdaclass/options/pricing.py` |
 | Earnings calendar helpers | `src/lambdaclass/earnings/calendar.py` |
 | Metrics / HTML report / dashboard | `src/lambdaclass/reporting/` (`reporting/dashboard/` for Streamlit) |
+| **Weekly options universe (earnings symbols)** | `data/weekly_options_universe.csv` or `data/weekly_options_stocks.csv` |
+
+## Weekly options universe (earnings research)
+
+The tradable universe for earnings-related options backtesting. Sourced from the
+CBOE Available Weeklys list — every US-listed symbol with weekly options expirations.
+
+- **`data/weekly_options_universe.csv`** — 704 symbols (626 stocks + 78 ETFs/ETNs)
+  with columns: `symbol`, `company_name`, `asset_type`, `sector`, `source`, `fetched_at`.
+- **`data/weekly_options_stocks.csv`** — 626 stocks only (ETFs/ETNs excluded). Use this
+  as the earnings universe since ETFs don't have earnings dates.
+- **`data/weekly_options_universe.json`** — Same data as JSON with metadata envelope.
+- **`data/weekly_options_universe_README.md`** — Schema docs, sector tags, source URL.
+
+**Usage**: iterate symbols from `weekly_options_stocks.csv`, then for each:
+```bash
+lambdaclass fetch SYMBOL --start YYYY-MM-DD
+lambdaclass fetch-earnings SYMBOL
+lambdaclass run earnings_long_straddle --symbol SYMBOL --start YYYY-MM-DD
+```
+
+**Refresh**: re-download from `https://www.cboe.com/us/options/symboldir/weeklys_options/?download=csv`
+and regenerate. These files are tracked in git (narrow `.gitignore` un-ignore); the rest
+of `data/` remains local-only.
 
 ## Auto-appended by continual-learning
 
@@ -75,7 +100,7 @@ The Cursor continual-learning stop-hook may append high-signal, durable facts be
 <!-- continual-learning:append-below -->
 
 - On Windows, default `python` may resolve to the Microsoft Store stub; use a real Python 3.11+ on PATH (or the `py` launcher with an explicit version) before `pip install -e ".[dev]"` or `pytest`.
-- Root `.gitignore` keeps `.cursor/hooks/state/`, `data/`, `runs/`, `zRawData/`, and `state/*.json` local-only; commit small OptionsDX samples under `tests/fixtures/optionsdx/` unless you add a narrow un-ignore.
+- Root `.gitignore` keeps `.cursor/hooks/state/`, `data/`, `runs/`, `zRawData/`, and `state/*.json` local-only; exceptions: `data/weekly_options_*.csv`, `data/weekly_options_*.json`, and `data/weekly_options_universe_README.md` are tracked (narrow un-ignore). Commit small OptionsDX samples under `tests/fixtures/optionsdx/` unless you add a narrow un-ignore.
 - Streamlit dashboard defaults to loopback (`127.0.0.1`); to open it from another device on the same LAN use `lambdaclass dashboard --host 0.0.0.0`, browse to `http://<this-PC-LAN-IPv4>:<port>`, and allow the port through Windows Firewall if needed—`0.0.0.0` exposes the UI to the whole LAN.
 - GitHub CI is pytest-only (`.github/workflows/ci.yml`: install `-e ".[dev]"` then `pytest`; no OptionsDX normalization or rate gates on runners).
 - `py-vollib` on PyPI is now a deprecated alias that redirects to `vollib`; prefer `vollib` when touching `pyproject.toml` or the pricing imports.

@@ -17,6 +17,30 @@ Design constraints: pure functions under `src/lambdaclass/`, Parquet + DuckDB re
 
 Add a `lambdaclass.volatility` package that builds a daily volatility series per symbol (realized + implied + relative-value metrics), an earnings event-study on that series, a cached artifact, a CLI command, a dashboard tab, and strategy-context fields.
 
+### Universe and history window
+
+Earnings symbols are the 626 stocks in `data/weekly_options_stocks.csv` (CBOE Available Weeklys, fetched 2026-09-27, on `master`). The 78 ETFs/ETNs in `data/weekly_options_universe.csv` stay out of the earnings study.
+
+History starts at **2019-01-01**, the beginning of the free DoltHub option history. The first pass is these 25 names, all present in the stock file:
+
+`AAPL`, `MSFT`, `NVDA`, `TSLA`, `AMD`, `META`, `AMZN`, `GOOGL`, `JPM`, `XOM`, `AVGO`, `CRM`, `COST`, `BA`, `DIS`, `INTC`, `QCOM`, `PYPL`, `COIN`, `UBER`, `SNOW`, `PANW`, `LLY`, `UNH`, `BAC`.
+
+`lambdaclass vol --universe` later walks the rest of `weekly_options_stocks.csv`. A symbol missing from DoltHub is skipped and recorded.
+
+### Market data sources
+
+| Need | Source |
+|------|--------|
+| OHLC bars | Existing `fetch` (yfinance) |
+| Historical chains and IV | DoltHub `post-no-preference/options`, table `option_chain`, paged by symbol and date. No account. |
+| Earnings dates and BMO/AMC | SEC EDGAR submissions JSON: 8-K filings that contain Item 2.02. BMO vs AMC comes from the acceptance timestamp. |
+
+`data_adapters/dolthub_chain.py` writes into the existing chain schema so `implied.py` stays vendor-neutral. `fetch-earnings --source edgar` writes the same `data/earnings/<SYMBOL>.parquet` the calendar helpers already read.
+
+The SEC `User-Agent` contact address is read only from `LAMBDACLASS__edgar__contact_email`. It is never written to git, `preferences.toml`, config snapshots, or logs.
+
+DoltHub has no underlying price and a reduced strike and expiry grid. Spot comes from the stock bars. If the two expiries needed to bracket a target DTE are absent, that IV point is null and the row carries a quality reason.
+
 ### 1. Realized (historical) volatility — `volatility/realized.py`
 
 All estimators return annualized vol (`× √252`), right-aligned rolling windows, NaN until the window fills.
@@ -102,15 +126,16 @@ Add `iv30`, `hv20`, `iv_rank_252`, `iv_pctile_252`, `iv_hv_ratio` to `StrategyCo
 ### Delivery order
 
 1. `realized.py`, `implied.py` (+ promote the ATM helper) with unit tests.
-2. `optionsdx_reader.read_atm_slice`, `series.py`, cache, `vol` CLI.
+2. `fetch-earnings --source edgar` and `dolthub_chain.py`, then `series.py`, cache, and `vol` for the 25-name pilot. `optionsdx_reader.read_atm_slice` remains the reader for OptionsDX files when those exist.
 3. `earnings_cycle.py` and tests.
 4. Volatility tab.
 5. `StrategyContext` fields.
+6. `vol --universe` over the remaining names in `weekly_options_stocks.csv`.
 
 ## Consequences
 
 - Easier: one cached Parquet per symbol answers "cheap or expensive?" instantly, and the same series feeds strategies, the dashboard, and the earnings event study. Everything is derived from data already on disk.
-- Data coverage is the main dependency. The earnings-cycle view needs several years of OptionsDX data and a matching earnings history; yfinance returns only a limited number of past earnings dates, so older events need the `fetch-earnings --csv` path.
+- Data coverage starts at 2019 and only for names DoltHub actually stores. The pilot proves the earnings cycle before the other ~600 names are fetched. OptionsDX files, when present, extend a single name back before 2019 through the same chain schema. `fetch-earnings --csv` remains available.
 - Vendor IV: OptionsDX `iv` is vendor-computed from a pre-close snapshot; `iv30` will differ slightly from thinkorswim's number. Quality flags and `n_quotes` are carried so thin days are visible.
 - Percentile/rank need a 252-day warm-up; the first year of a series has no gauge.
 - Adding `StrategyContext` fields is additive; existing strategies are unaffected.

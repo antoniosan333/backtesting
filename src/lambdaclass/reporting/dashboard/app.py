@@ -659,6 +659,158 @@ def _render_earnings_tab(
 
 
 @st.cache_data(show_spinner=False)
+def _load_vol_cached(vol_path_str: str, mtime_ns: int) -> pd.DataFrame:
+    """Load cached volatility series for a symbol."""
+    path = Path(vol_path_str)
+    if not path.is_file():
+        return pd.DataFrame()
+    return pd.read_parquet(path)
+
+
+def _render_volatility_tab(
+    symbol: str,
+    prefs: Preferences,
+    data_dir: Path,
+) -> None:
+    """Volatility series (IV vs HV) and earnings IV cycle study."""
+    st.subheader("Volatility")
+    if not symbol:
+        st.info("Set a symbol in the sidebar.")
+        return
+
+    vol_path = data_dir / "cache" / "vol" / f"{symbol}.parquet"
+    if not vol_path.is_file():
+        st.warning(
+            f"No volatility series for {symbol}. "
+            "Run `lambdaclass vol {symbol}` or `lambdaclass fetch-dolthub {symbol} --vol-only` first."
+        )
+        return
+
+    mtime = vol_path.stat().st_mtime_ns if vol_path.is_file() else 0
+    vol_df = _load_vol_cached(str(vol_path), mtime)
+    if vol_df.empty:
+        st.warning(f"Volatility series for {symbol} is empty.")
+        return
+
+    st.caption(f"{len(vol_df)} rows · date range {vol_df['date'].iloc[0]} → {vol_df['date'].iloc[-1]}")
+
+    # --- IV vs HV chart ---
+    has_iv = "iv30" in vol_df.columns and pd.to_numeric(vol_df["iv30"], errors="coerce").notna().any()
+    has_hv = "hv20" in vol_df.columns and pd.to_numeric(vol_df["hv20"], errors="coerce").notna().any()
+
+    if has_iv or has_hv:
+        import plotly.graph_objects as go
+        theme = prefs.reporting.plot_theme
+        fig = go.Figure()
+        chart_df = vol_df.copy()
+        chart_df["date"] = pd.to_datetime(chart_df["date"], errors="coerce")
+        if has_iv:
+            fig.add_trace(go.Scatter(
+                x=chart_df["date"],
+                y=pd.to_numeric(chart_df["iv30"], errors="coerce"),
+                name="IV30",
+                line=dict(color="#ffc94d", width=1.5),
+            ))
+        if has_hv:
+            fig.add_trace(go.Scatter(
+                x=chart_df["date"],
+                y=pd.to_numeric(chart_df["hv20"], errors="coerce"),
+                name="HV20",
+                line=dict(color="#00d4b8", width=1.5),
+            ))
+        # Add earnings markers if available
+        earnings = _load_earnings_cached(str(data_dir), symbol)
+        if not earnings.empty:
+            earnings_dates = pd.to_datetime(earnings["earnings_date"], errors="coerce").dropna()
+            for ed in earnings_dates:
+                fig.add_vline(x=ed, line_dash="dash", line_color="rgba(255,90,90,0.3)")
+        fig.update_layout(
+            title=f"{symbol} — Implied vs Realized Volatility",
+            xaxis_title="Date",
+            yaxis_title="Annualized Vol",
+            template="plotly_dark" if "dark" in theme else "plotly_white",
+            height=400,
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+    # --- IV rank gauge ---
+    if has_iv and "iv_rank_252" in vol_df.columns:
+        rank = pd.to_numeric(vol_df["iv_rank_252"], errors="coerce").dropna()
+        if not rank.empty:
+            latest_rank = float(rank.iloc[-1])
+            col1, col2, col3 = st.columns(3)
+            col1.metric("IV Rank (252d)", f"{latest_rank*100:.0f}%")
+            if "iv_hv_ratio" in vol_df.columns:
+                ratio = pd.to_numeric(vol_df["iv_hv_ratio"], errors="coerce").dropna()
+                if not ratio.empty:
+                    col2.metric("IV/HV Ratio", f"{ratio.iloc[-1]:.2f}")
+            if "iv_pctile_252" in vol_df.columns:
+                pctile = pd.to_numeric(vol_df["iv_pctile_252"], errors="coerce").dropna()
+                if not pctile.empty:
+                    col3.metric("IV Percentile", f"{pctile.iloc[-1]*100:.0f}%")
+
+    # --- Earnings cycle study (from iv-study output) ---
+    events_path = data_dir / "earnings" / "events" / "iv_ramp_crush_study.parquet"
+    if events_path.is_file():
+        st.markdown("### Earnings IV Ramp/Crush Study")
+        events_df = pd.read_parquet(events_path)
+        # Filter to current symbol if column exists
+        if "symbol" in events_df.columns:
+            events_df = events_df[events_df["symbol"].str.upper() == symbol.upper()]
+        if not events_df.empty:
+            st.dataframe(events_df, use_container_width=True)
+            st.download_button(
+                "Download study.csv",
+                data=events_df.to_csv(index=False).encode("utf-8"),
+                file_name=f"{symbol}-iv-ramp-crush.csv",
+                mime="text/csv",
+                key="dl_vol_study",
+            )
+        else:
+            st.caption(f"No events for {symbol} in the study. Run `lambdaclass iv-study --pilot`.")
+    else:
+        st.caption("No IV ramp/crush study yet. Run `lambdaclass iv-study --pilot` to generate.")
+
+    # --- Cycle aggregate chart ---
+    cycle_path = data_dir / "earnings" / "events" / "iv_cycle_aggregate.parquet"
+    if cycle_path.is_file():
+        cycle_df = pd.read_parquet(cycle_path)
+        if not cycle_df.empty:
+            import plotly.graph_objects as go
+            theme = prefs.reporting.plot_theme
+            # Filter to iv30 or iv_front normalized metric
+            for metric in ("iv30_norm", "iv_front_norm", "iv30", "iv_front"):
+                subset = cycle_df[cycle_df["metric"] == metric]
+                if not subset.empty:
+                    fig2 = go.Figure()
+                    fig2.add_trace(go.Scatter(
+                        x=subset["rel_day"], y=subset["median"],
+                        name="Median", line=dict(color="#2d7aff", width=2),
+                    ))
+                    fig2.add_trace(go.Scatter(
+                        x=subset["rel_day"], y=subset["q75"],
+                        name="Q75", line=dict(color="rgba(45,122,255,0.3)"),
+                        showlegend=False,
+                    ))
+                    fig2.add_trace(go.Scatter(
+                        x=subset["rel_day"], y=subset["q25"],
+                        name="Q25", fill="tonexty",
+                        fillcolor="rgba(45,122,255,0.15)",
+                        line=dict(color="rgba(45,122,255,0.3)"),
+                        showlegend=False,
+                    ))
+                    fig2.update_layout(
+                        title=f"IV Cycle — {metric} (rel_day 0 = pre-event, 1 = reaction)",
+                        xaxis_title="Relative Day",
+                        yaxis_title=metric,
+                        template="plotly_dark" if "dark" in theme else "plotly_white",
+                        height=350,
+                    )
+                    st.plotly_chart(fig2, use_container_width=True)
+                    break
+
+
+@st.cache_data(show_spinner=False)
 def _load_sweep_cached(sweep_dir_str: str, mtime_ns: int) -> dict[str, Any]:
     bundle = loader.load_sweep(Path(sweep_dir_str))
     return {
@@ -877,8 +1029,8 @@ def main() -> None:
     else:
         st.sidebar.info("report.html not generated for this run.")
 
-    tab_run, tab_compare, tab_sweeps, tab_chain, tab_strategy, tab_earnings = st.tabs(
-        ["Run", "Compare", "Sweeps", "Chain", "Strategy", "Earnings"]
+    tab_run, tab_compare, tab_sweeps, tab_chain, tab_strategy, tab_earnings, tab_volatility = st.tabs(
+        ["Run", "Compare", "Sweeps", "Chain", "Strategy", "Earnings", "Volatility"]
     )
     with tab_run:
         _render_run_tab(active, bars, indicator_overlays)

@@ -114,6 +114,16 @@ class ExpectedMoveConfig(BaseModel):
     horizons_dte: list[int] = Field(default_factory=lambda: [0, 7, 30])
 
 
+class VolatilityConfig(BaseModel):
+    hv_windows: list[int] = Field(default_factory=lambda: [10, 20, 30, 60, 252])
+    iv_targets_dte: list[int] = Field(default_factory=lambda: [7, 30, 60, 90])
+    lookback_days: int = Field(default=252, ge=2)
+    max_strike_distance_pct: float = Field(default=0.15, gt=0.0)
+    pre_days: int = Field(default=30, ge=1)
+    post_days: int = Field(default=10, ge=1)
+    history_start: str = "2019-01-01"
+
+
 class Preferences(BaseModel):
     defaults: DefaultsConfig = Field(default_factory=DefaultsConfig)
     paths: PathsConfig = Field(default_factory=PathsConfig)
@@ -121,6 +131,7 @@ class Preferences(BaseModel):
     risk: RiskConfig = Field(default_factory=RiskConfig)
     optionsdx: OptionsDXNormalizeConfig = Field(default_factory=OptionsDXNormalizeConfig)
     expected_move: ExpectedMoveConfig = Field(default_factory=ExpectedMoveConfig)
+    volatility: VolatilityConfig = Field(default_factory=VolatilityConfig)
 
     @classmethod
     def load(cls, path: Path, env_prefix: str = "LAMBDACLASS__") -> Preferences:
@@ -166,6 +177,7 @@ def snapshot_preferences(
             "risk": preferences.risk.model_dump(),
             "optionsdx": preferences.optionsdx.model_dump(),
             "expected_move": preferences.expected_move.model_dump(),
+            "volatility": preferences.volatility.model_dump(),
             "strategy_params": {key: str(value) for key, value in redacted_strategy_params.items()},
             "cli_overrides": {key: str(value) for key, value in redacted_cli_overrides.items()},
         }

@@ -399,6 +399,19 @@ def _stock_fill_price(row: pd.Series, *, at_open: bool) -> float:
     return open_price if open_price > 0.0 else close
 
 
+def _vol_on_date(vol_series: pd.DataFrame | None) -> dict[str, dict[str, float | None]]:
+    if vol_series is None or vol_series.empty or "date" not in vol_series.columns:
+        return {}
+    lookup: dict[str, dict[str, float | None]] = {}
+    for _, row in vol_series.iterrows():
+        values: dict[str, float | None] = {}
+        for column in ("iv30", "hv20", "iv_rank_252", "iv_pctile_252", "iv_hv_ratio"):
+            number = pd.to_numeric(row.get(column), errors="coerce")
+            values[column] = None if pd.isna(number) else float(number)
+        lookup[str(row["date"])[:10]] = values
+    return lookup
+
+
 def run_backtest(
     strategy: Strategy,
     bars: pd.DataFrame,
@@ -407,6 +420,7 @@ def run_backtest(
     earnings: pd.DataFrame | None = None,
     *,
     chain_by_date: Mapping[str, pd.DataFrame] | None = None,
+    vol_series: pd.DataFrame | None = None,
 ) -> RunResult:
     """Run ``strategy`` over ``bars``.
 
@@ -417,6 +431,7 @@ def run_backtest(
     if chain_by_date is None:
         chain_by_date = prepare_chain_by_date(options_chain)
     earnings_df = earnings if earnings is not None else pd.DataFrame()
+    vol_by_date = _vol_on_date(vol_series)
     closes_by_date = {
         str(row["date"]): float(row["close"])
         for _, row in bars_sorted.iterrows()
@@ -491,6 +506,7 @@ def run_backtest(
         chain = chain_by_date.get(date_key)
         price = float(row["close"])
         earn_ctx = context_fields(date_key, earnings_df)
+        vol_ctx = vol_by_date.get(date_key, {})
 
         # Settle expired options before strategy decisions
         expired = [sym for sym, pos in open_options.items() if bar_date >= pos.expiry]
@@ -546,6 +562,11 @@ def run_backtest(
             open_options=_open_option_views(open_options),
             last_fills=last_fills,
             last_rejections=last_rejections,
+            iv30=vol_ctx.get("iv30"),
+            hv20=vol_ctx.get("hv20"),
+            iv_rank_252=vol_ctx.get("iv_rank_252"),
+            iv_pctile_252=vol_ctx.get("iv_pctile_252"),
+            iv_hv_ratio=vol_ctx.get("iv_hv_ratio"),
         )
         decision = strategy.on_bar(context)
         if next_open:

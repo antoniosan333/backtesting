@@ -22,6 +22,8 @@ from lambdaclass.config import (
 )
 from lambdaclass.data_adapters.optionsdx_normalize import NormalizeOptions, run_normalize
 from lambdaclass.data_adapters.yfinance_adapter import YFinanceAdapter
+from lambdaclass.data_adapters.dolthub_chain import fetch_dolthub_chain
+from lambdaclass.data_adapters.edgar_earnings import fetch_earnings_frame
 from lambdaclass.earnings.calendar import normalize_earnings_frame
 from lambdaclass.reporting import dashboard as reporting_dashboard
 from lambdaclass.retry import with_retry
@@ -39,6 +41,10 @@ from lambdaclass.runs.sweep import (
 )
 from lambdaclass.state import load_json, save_json
 from lambdaclass.storage.duckdb_store import DuckDBStore
+from lambdaclass.storage.optionsdx_reader import read_atm_slice
+from lambdaclass.volatility.earnings_cycle import align_events, cycle_summary, event_table, normalize
+from lambdaclass.volatility.series import build_vol_series, merge_vol_cache
+from lambdaclass.volatility.universe import PILOT_SYMBOLS, load_stock_universe
 from lambdaclass.strategies.base import Strategy
 from lambdaclass.strategies.loader import StrategyLoadError, load_strategy_class
 from lambdaclass.strategies.params import ParamError, apply_params, parse_assignments, resolve_params
@@ -294,6 +300,8 @@ def fetch_data(
 def fetch_earnings(
     symbol: str,
     csv: str | None = typer.Option(None, help="Optional CSV with earnings_date [, timing] columns"),
+    source: str = typer.Option("yfinance", help="yfinance or edgar"),
+    force: bool = typer.Option(False, help="Overwrite existing rows for matching dates (via dedupe keep last)"),
 ) -> None:
     """Fetch or import earnings calendar into data/earnings/<SYMBOL>.parquet."""
     root = _repo_root()
@@ -306,18 +314,25 @@ def fetch_earnings(
             raise typer.BadParameter(f"CSV not found: {path}")
         raw = pd.read_csv(path)
         frame = normalize_earnings_frame(raw, symbol=symbol, source="csv")
-    else:
+        source_name = "csv"
+    elif source.strip().lower() == "edgar":
+        frame = fetch_earnings_frame(symbol)
+        source_name = "edgar"
+    elif source.strip().lower() == "yfinance":
         adapter = _get_adapter(prefs.defaults.data_adapter)
         raw = _fetch_with_retry(lambda: adapter.get_earnings_dates(symbol))
         frame = normalize_earnings_frame(raw, symbol=symbol, source="yfinance")
+        source_name = "yfinance"
+    else:
+        raise typer.BadParameter("source must be yfinance, edgar, or omitted when --csv is set")
     out_path = store.write_earnings(symbol, frame)
     markers_path = root / "state" / "earnings_fetch_markers.json"
     markers = load_json(markers_path)
     markers[symbol] = {
         "rows": int(len(frame)),
         "path": str(out_path),
-        "source": "csv" if csv else "yfinance",
-        "updated_at": datetime.now(tz=UTC).isoformat(),
+        "source": source_name,
+        "updated_at": datetime.now(tz=timezone.utc).isoformat(),
     }
     save_json(markers_path, markers)
     typer.echo(f"Earnings calendar {symbol}: {len(frame)} rows → {out_path}")

@@ -340,6 +340,34 @@ def test_expected_moves_are_available_to_strategy_and_written(tmp_path: Path) ->
     assert written["asof"].tolist() == [asof]
 
 
+def test_strategy_receives_cached_volatility() -> None:
+    class Probe(Strategy):
+        name = "probe_vol"
+        params: dict = {}
+
+        def __init__(self) -> None:
+            self.iv30: float | None = None
+
+        def on_bar(self, context: StrategyContext) -> StrategyDecision:
+            self.iv30 = context.iv30
+            return StrategyDecision()
+
+    probe = Probe()
+    vol = pd.DataFrame(
+        {
+            "date": ["2026-01-01"],
+            "iv30": [0.22],
+            "hv20": [0.16],
+            "iv_rank_252": [0.40],
+            "iv_pctile_252": [0.70],
+            "iv_hv_ratio": [1.375],
+        }
+    )
+    run_backtest(probe, _bars([("2026-01-01", 100.0)]), pd.DataFrame(), _prefs(), vol_series=vol)
+
+    assert probe.iv30 == pytest.approx(0.22)
+
+
 def test_expected_moves_are_none_without_a_chain() -> None:
     strategy = CaptureExpectedMoves()
 

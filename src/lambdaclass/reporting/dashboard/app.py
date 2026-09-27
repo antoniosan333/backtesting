@@ -892,6 +892,8 @@ def main() -> None:
         _render_strategy_tab(symbol_override, bars, prefs, root)
     with tab_earnings:
         _render_earnings_tab(symbol_override, bars, active, data_dir, prefs)
+    with tab_volatility:
+        _render_volatility_tab(symbol_override, prefs, data_dir)
 
 
 main()

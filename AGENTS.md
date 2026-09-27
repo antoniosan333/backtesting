@@ -47,6 +47,7 @@ All via `lambdaclass` (Python ≥ 3.11, `pip install -e ".[dev]"`).
 | `compare STRATEGY [--limit]` | Compare metrics for a strategy |
 | `dashboard [--host] [--port] [--headless/--no-headless]` | Streamlit read-only review UI (`streamlit run` the packaged `reporting/dashboard/app.py`) |
 | `normalize-optionsdx` | OptionsDX `*.txt` → normalized Parquet + JSON reports (prefs `[optionsdx]`) |
+| `vol SYMBOL` or `vol --pilot` / `vol --universe` | Build cached HV/IV series under `data/cache/vol/` and print the earnings IV cycle. Earnings dates: `fetch-earnings SYMBOL --source edgar` |
 
 `normalize-optionsdx` flags: `--input-dir`, `--output-dir`, `--reports-dir`, `--dry-run`, `--fail-on-errors`, `--fail-on-gates`, `--max-negative-iv-rate`, `--max-crossed-market-rate`.
 
@@ -78,6 +79,7 @@ All via `lambdaclass` (Python ≥ 3.11, `pip install -e ".[dev]"`).
 | Option presets / payoff curves | `src/lambdaclass/options/presets.py`, `src/lambdaclass/options/payoff.py` |
 | Earnings calendar helpers | `src/lambdaclass/earnings/calendar.py` (`EarningsCalendar`) |
 | Earnings universe / reaction events | `src/lambdaclass/cli_universe.py`, `src/lambdaclass/earnings/history.py`, `src/lambdaclass/earnings/events.py` |
+| HV / IV series and earnings cycle | `src/lambdaclass/volatility/` ([ADR-0012](docs/decisions/0012-volatility-analysis.md)) |
 | Metrics / HTML report / dashboard | `src/lambdaclass/reporting/` (`reporting/dashboard/` for Streamlit) |
 | **Weekly options universe (earnings symbols)** | `data/weekly_options_universe.csv` or `data/weekly_options_stocks.csv` |
 

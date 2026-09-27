@@ -32,3 +32,12 @@ reports_dir = "data/optionsdx/reports"
 skew_factor = 0.85
 max_spread_pct = 0.5
 horizons_dte = [0, 7, 30]
+
+[volatility]
+hv_windows = [10, 20, 30, 60, 252]
+iv_targets_dte = [7, 30, 60, 90]
+lookback_days = 252
+max_strike_distance_pct = 0.15
+pre_days = 30
+post_days = 10
+history_start = "2019-01-01"

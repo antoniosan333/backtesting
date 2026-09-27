@@ -44,3 +44,4 @@ Copy [0000-template.md](0000-template.md) and fill in sections.
 | [0009](0009-parameter-sweeps.md) | `run --param` overrides, `lambdaclass.runs` orchestration, and `sweep` |
 | [0010](0010-weekly-options-earnings-universe.md) | Weekly-options universe, Nasdaq earnings history, and earnings reaction events |
 | [0011](0011-expected-move.md) | Expected move from historical option chains |
+| [0012](0012-volatility-analysis.md) | Historical vs implied volatility analysis and the earnings IV cycle |

@@ -18,6 +18,13 @@ import streamlit as st
 from lambdaclass.config import DEFAULT_PREFERENCES, Preferences
 from lambdaclass.options.expected_move import expected_moves
 from lambdaclass.reporting.dashboard import charts, indicators, loader, option_strategies
+from lambdaclass.reporting.dashboard import vol_charts
+from lambdaclass.volatility.earnings_cycle import (
+    aggregate_cycle,
+    align_events,
+    event_table,
+    normalize,
+)
 
 st.set_page_config(page_title="LambdaClass Dashboard", layout="wide")
 
@@ -654,6 +661,59 @@ def _render_earnings_tab(
         )
 
 
+def _render_volatility_tab(
+    symbol: str,
+    prefs: Preferences,
+    data_dir: Path,
+) -> None:
+    """Cached IV versus HV series and the earnings-cycle study."""
+    st.subheader("Volatility")
+    if not symbol:
+        st.info("Set a symbol in the sidebar.")
+        return
+    path = data_dir / "cache" / "vol" / f"{symbol}.parquet"
+    if not path.is_file():
+        st.warning(f"No volatility series for {symbol}. Run `lambdaclass vol {symbol}`.")
+        return
+    series = pd.read_parquet(path)
+    earnings = _load_earnings_cached(str(data_dir), symbol)
+    theme = prefs.reporting.plot_theme
+    latest = series.dropna(subset=["iv30"]).tail(1)
+    if not latest.empty:
+        row = latest.iloc[0]
+        cols = st.columns(4)
+        cols[0].metric("IV30", f"{float(row['iv30']):.1%}")
+        cols[1].metric("HV20", f"{float(row['hv20']):.1%}")
+        cols[2].metric("IV / HV", f"{float(row['iv_hv_ratio']):.2f}")
+        percentile = row["iv_pctile_252"]
+        cols[3].metric("IV percentile", "-" if pd.isna(percentile) else f"{float(percentile):.0%}")
+    st.caption(
+        "Options are expensive when IV percentile is high and IV/HV > 1.2; cheap when both are low. "
+        "Before earnings, compare implied_event_move to the median realized move in the table."
+    )
+    st.plotly_chart(vol_charts.iv_versus_hv(series, earnings, theme=theme), use_container_width=True)
+    st.plotly_chart(vol_charts.iv_gauge(series, theme=theme), use_container_width=True)
+    st.plotly_chart(vol_charts.premium_realized(series, theme=theme), use_container_width=True)
+    if earnings.empty:
+        st.info(f"No earnings calendar for {symbol}.")
+        return
+    aligned = normalize(
+        align_events(
+            series,
+            earnings,
+            pre_days=prefs.volatility.pre_days,
+            post_days=prefs.volatility.post_days,
+        )
+    )
+    cycle = aggregate_cycle(aligned)
+    st.plotly_chart(vol_charts.earnings_cycle_chart(cycle, theme=theme), use_container_width=True)
+    events = event_table(aligned)
+    if events.empty:
+        st.caption("No earnings events overlap this series.")
+    else:
+        st.dataframe(events, use_container_width=True)
+
+
 def main() -> None:
     st.title("LambdaClass - Backtest Review")
     root = _repo_root()
@@ -751,8 +811,8 @@ def main() -> None:
         else:
             st.sidebar.info("report.html not generated for this run.")
 
-    tab_run, tab_compare, tab_chain, tab_strategy, tab_earnings = st.tabs(
-        ["Run", "Compare", "Chain", "Strategy", "Earnings"]
+    tab_run, tab_compare, tab_chain, tab_strategy, tab_earnings, tab_volatility = st.tabs(
+        ["Run", "Compare", "Chain", "Strategy", "Earnings", "Volatility"]
     )
     with tab_run:
         _render_run_tab(active, bars, indicator_overlays)
@@ -764,6 +824,8 @@ def main() -> None:
         _render_strategy_tab(symbol_override, bars, prefs, root)
     with tab_earnings:
         _render_earnings_tab(symbol_override, bars, active, data_dir, prefs)
+    with tab_volatility:
+        _render_volatility_tab(symbol_override, prefs, data_dir)
 
 
 main()

@@ -37,6 +37,7 @@ All via `lambdaclass` (Python ≥ 3.11, `pip install -e ".[dev]"`).
 | `compare STRATEGY [--limit]` | Compare metrics for a strategy |
 | `dashboard [--host] [--port] [--headless/--no-headless]` | Streamlit read-only review UI (`streamlit run` the packaged `reporting/dashboard/app.py`) |
 | `normalize-optionsdx` | OptionsDX `*.txt` → normalized Parquet + JSON reports (prefs `[optionsdx]`) |
+| `vol SYMBOL` or `vol --pilot` / `vol --universe` | Build cached HV/IV series under `data/cache/vol/` and print the earnings IV cycle. Earnings dates: `fetch-earnings SYMBOL --source edgar` |
 
 `normalize-optionsdx` flags: `--input-dir`, `--output-dir`, `--reports-dir`, `--dry-run`, `--fail-on-errors`, `--fail-on-gates`, `--max-negative-iv-rate`, `--max-crossed-market-rate`.
 
@@ -53,6 +54,7 @@ All via `lambdaclass` (Python ≥ 3.11, `pip install -e ".[dev]"`).
 - **Fetch**: Retries (3) with backoff on adapter failures.
 - **Storage**: `DuckDBStore` writes Parquet under `data/stocks/<SYMBOL>.parquet` and `data/options/<SYMBOL>.parquet`; append merges and dedupes by `(symbol, date)` / `(symbol, contract_symbol, asof)`.
 - **Backtest engine**: Bar loop; options chain keyed by `asof` string matching bar `date`; stock + options commission/slippage from prefs; open-options ledger with MTM and expiry settlement ([ADR-0005](docs/decisions/0005-options-engine-accounting.md)).
+- **GitHub and the local PC**: cloud agents can push to `origin` only. The PC catches up with `scripts/sync-from-github.ps1` (fast-forward only). See `.cursor/skills/sync-github-local/SKILL.md`.
 
 ## Where to look first
 
@@ -66,6 +68,7 @@ All via `lambdaclass` (Python ≥ 3.11, `pip install -e ".[dev]"`).
 | Run loop + outputs | `src/lambdaclass/backtest/engine.py` |
 | BSM / Greeks / mid quotes | `src/lambdaclass/options/pricing.py` |
 | Earnings calendar helpers | `src/lambdaclass/earnings/calendar.py` |
+| HV / IV series and earnings cycle | `src/lambdaclass/volatility/` ([ADR-0008](docs/decisions/0008-volatility-analysis.md)) |
 | Metrics / HTML report / dashboard | `src/lambdaclass/reporting/` (`reporting/dashboard/` for Streamlit) |
 
 ## Auto-appended by continual-learning

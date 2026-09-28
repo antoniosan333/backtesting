@@ -206,12 +206,26 @@ def _apply_option_fill(
     return cash
 
 
+def _vol_on_date(vol_series: pd.DataFrame | None) -> dict[str, dict[str, float | None]]:
+    if vol_series is None or vol_series.empty or "date" not in vol_series.columns:
+        return {}
+    lookup: dict[str, dict[str, float | None]] = {}
+    for _, row in vol_series.iterrows():
+        values: dict[str, float | None] = {}
+        for column in ("iv30", "hv20", "iv_rank_252", "iv_pctile_252", "iv_hv_ratio"):
+            number = pd.to_numeric(row.get(column), errors="coerce")
+            values[column] = None if pd.isna(number) else float(number)
+        lookup[str(row["date"])[:10]] = values
+    return lookup
+
+
 def run_backtest(
     strategy: Strategy,
     bars: pd.DataFrame,
     options_chain: pd.DataFrame,
     preferences: Preferences,
     earnings: pd.DataFrame | None = None,
+    vol_series: pd.DataFrame | None = None,
 ) -> RunResult:
     bars_sorted = bars.sort_values("date").reset_index(drop=True)
     chain_by_date = (
@@ -223,6 +237,7 @@ def run_backtest(
         else {}
     )
     earnings_df = earnings if earnings is not None else pd.DataFrame()
+    vol_by_date = _vol_on_date(vol_series)
     closes_by_date = {
         str(row["date"]): float(row["close"])
         for _, row in bars_sorted.iterrows()
@@ -261,6 +276,7 @@ def run_backtest(
         chain = chain_by_date.get(date_key)
         price = float(row["close"])
         earn_ctx = context_fields(date_key, earnings_df)
+        vol_ctx = vol_by_date.get(date_key, {})
 
         # Settle expired options before strategy decisions
         expired = [
@@ -297,6 +313,11 @@ def run_backtest(
             days_since_last_earnings=earn_ctx["days_since_last_earnings"],
             next_earnings_date=earn_ctx["next_earnings_date"],
             earnings_timing=earn_ctx["earnings_timing"],
+            iv30=vol_ctx.get("iv30"),
+            hv20=vol_ctx.get("hv20"),
+            iv_rank_252=vol_ctx.get("iv_rank_252"),
+            iv_pctile_252=vol_ctx.get("iv_pctile_252"),
+            iv_hv_ratio=vol_ctx.get("iv_hv_ratio"),
         )
         decision = strategy.on_bar(context)
         qty = int(decision.quantity)

@@ -29,6 +29,11 @@ class StrategyContext:
     days_since_last_earnings: int | None = None
     next_earnings_date: str | None = None
     earnings_timing: str | None = None
+    iv30: float | None = None
+    hv20: float | None = None
+    iv_rank_252: float | None = None
+    iv_pctile_252: float | None = None
+    iv_hv_ratio: float | None = None
 
 
 @dataclass

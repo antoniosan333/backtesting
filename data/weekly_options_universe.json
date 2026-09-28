@@ -1,0 +1,4234 @@
+{
+  "description": "Universe of symbols with CBOE-listed weekly options, for earnings research",
+  "source": "https://www.cboe.com/us/options/symboldir/weeklys_options/?download=csv",
+  "fetched_at": "2026-09-27T15:29:37Z",
+  "total_symbols": 704,
+  "stocks": 626,
+  "etfs_etns": 78,
+  "symbols": [
+    {
+      "symbol": "AMDL",
+      "company_name": "GRANITESHARES ETF TR GRANITE 2X LONG",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "ARKG",
+      "company_name": "ARK Genomic Revolution ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "ARKK",
+      "company_name": "ARK Innovation ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "ASHR",
+      "company_name": "DBX ETF TR XTRACK HRVST CSI",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "BITO",
+      "company_name": "PROSHARES TR BITCOIN ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "BITX",
+      "company_name": "2x Bitcoin ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "BKLN",
+      "company_name": "INVESCO EXCHANGE-TRADED FD TR SR LN ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "DPST",
+      "company_name": "DIREXION SHARES ETF TRUST DAILY BANKS ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "DRAM",
+      "company_name": "Roundhill Memory ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "EEM",
+      "company_name": "ISHARES TR MSCI EMG MKT ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "EFA",
+      "company_name": "ISHARES TR MSCI EAFE ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "ETHE",
+      "company_name": "GRAYSCALE ETHEREUM STAKING ETF SHS",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "ETHU",
+      "company_name": "2x Ether ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "EWJ",
+      "company_name": "ISHARES INC MSCI JAPAN ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "EWY",
+      "company_name": "ISHARES INC MSCI STH KOR ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "EWZ",
+      "company_name": "ISHARES INC MSCI BRAZIL ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "FAS",
+      "company_name": "DIREXION SHARES ETF TRUST DAILY FINANCIAL",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "FEZ",
+      "company_name": "SPDR INDEX SHS FDS ST STR EU 50 ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "FXI",
+      "company_name": "ISHARES TR CHINA LG-CAP ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "GBTC",
+      "company_name": "GRAYSCALE BITCOIN TRUST ETF SHS REP COM UT",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "GDX",
+      "company_name": "VANECK ETF TRUST GOLD MINERS ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "GDXJ",
+      "company_name": "VANECK ETF TRUST JUNIOR GOLD MINE",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "HYG",
+      "company_name": "ISHARES TR IBOXX HI YD ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "IBIT",
+      "company_name": "ISHARES BITCOIN TRUST ETF SHS BEN INT",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "ICLN",
+      "company_name": "ISHARES TR GL CLEAN ENE ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "IGV",
+      "company_name": "iShares Expanded Tech-Software Sector ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "IQQ",
+      "company_name": "ISHARES TR NASDAQ 100 ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "IVV",
+      "company_name": "ISHARES TR CORE S&P500 ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "IWM",
+      "company_name": "ISHARES TR RUSSELL 2000 ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "IYR",
+      "company_name": "ISHARES TR U.S. REAL ES ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "JETS",
+      "company_name": "ETF SER SOLUTIONS US GLB JETS",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "KORU",
+      "company_name": "DIREXION SHARES ETF TRUST DAIL MS KORE ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "LABD",
+      "company_name": "DIREXION SHARES ETF TRUST DAI BIO BEA ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "LABU",
+      "company_name": "DIREXION SHARES ETF TRUST DA BI BU 3X ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "LQD",
+      "company_name": "ISHARES TR IBOXX INV CP ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "MAGS",
+      "company_name": "Roundhill Magnificent Seven ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "METU",
+      "company_name": "DIREXION SHARES ETF TRUST DLY META BULL 2X",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "MSOS",
+      "company_name": "ADVISORSHARES TR PURE US CANN ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "MSTU",
+      "company_name": "T-Rex 2X Long MSTR Daily Target ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "MSTX",
+      "company_name": "TIDAL TRUST II DE 2X LO MS ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "MTUM",
+      "company_name": "iShares MSCI USA Momentum Factor ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "MUU",
+      "company_name": "DIREXION SHARES ETF TRUST DLY MU BULL 2X",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "NAIL",
+      "company_name": "DIREXION SHARES ETF TRUST DAIL HO SUPP ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "NASA",
+      "company_name": "TEMA ETF TRUST SPACE INNOV ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "NFLX",
+      "company_name": "NETFLIX INC. COM",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "NUGT",
+      "company_name": "DIREXION SHARES ETF TRUST DAI GOL BUL ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "NVDL",
+      "company_name": "GRANITESHARES ETF TR 2X LONG NVDA ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "NVDX",
+      "company_name": "T-Rex 2X Long NVIDIA Daily Target ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "SILJ",
+      "company_name": "AMPLIFY ETF TR JR SILV MINE ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "SMH",
+      "company_name": "VANECK ETF TRUST SEMICONDUCTR ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "SNXX",
+      "company_name": "Tradr 2X Long SNDK Daily ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "SOXL",
+      "company_name": "DIREXION SHARES ETF TRUST DAI SEM BUL ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "SOXS",
+      "company_name": "DIREXION SHARES ETF TRUST DAI SEM 3X ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "SPCH",
+      "company_name": "Leverage Shares 2X Long SPCX Daily ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "SPXL",
+      "company_name": "DIREXION SHARES ETF TRUST DA 500 BU 3X ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "SPXS",
+      "company_name": "DIREXION SHARES ETF TRUST DA 500 BE 3X ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "SPY",
+      "company_name": "STATE STR SPDR S&P 500 ETF TR TR UNIT",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "SVIX",
+      "company_name": "-1x Short VIX Futures ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "TLT",
+      "company_name": "ISHARES TR 20 YR TR BD ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "TMF",
+      "company_name": "DIREXION SHARES ETF TRUST DLY 20 YR TRESUR",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "TNA",
+      "company_name": "DIREXION SHARES ETF TRUST DAILY SMALL CAP",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "TSLL",
+      "company_name": "DIREXION SHARES ETF TRUST DLY TSLA BULL 2X",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "TZA",
+      "company_name": "DIREXION SHARES ETF TRUST DAILY SMALL CAP",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "UVIX",
+      "company_name": "2x Long VIX Futures ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "UVXY",
+      "company_name": "ProShares Ultra VIX Short-Term Futures ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "VOO",
+      "company_name": "VANGUARD INDEX FDS S&P 500 ETF SHS",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "VXX",
+      "company_name": "iPath Series B S&P 500 VIX Short-Term Futures ETN",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "XLB",
+      "company_name": "SELECT SECTOR SPDR TR ST STR MATER ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "XLC",
+      "company_name": "SELECT SECTOR SPDR TR ST STR SVC ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "XLE",
+      "company_name": "SELECT SECTOR SPDR TR ST STR ENERG ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "XLF",
+      "company_name": "SELECT SECTOR SPDR TR ST STR FINL ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "XLI",
+      "company_name": "SELECT SECTOR SPDR TR ST STR INDL ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "XLK",
+      "company_name": "SELECT SECTOR SPDR TR ST STR TECHN ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "XLP",
+      "company_name": "SELECT SECTOR SPDR TR ST STR STAPL ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "XLU",
+      "company_name": "SELECT SECTOR SPDR TR ST STR UTIL ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "XLV",
+      "company_name": "SELECT SECTOR SPDR TR ST STR CARE ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "XLY",
+      "company_name": "SELECT SECTOR SPDR TR ST STR DISCR ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "YINN",
+      "company_name": "DIREXION SHARES ETF TRUST DA FT CH BU ETF",
+      "asset_type": "ETF/ETN",
+      "sector": "index_fund"
+    },
+    {
+      "symbol": "AA",
+      "company_name": "ALCOA CORP COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "AAL",
+      "company_name": "AMERICAN AIRLINES GROUP INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "AAOI",
+      "company_name": "APPLIED OPTOELECTRONICS INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "AAP",
+      "company_name": "ADVANCE AUTO PARTS INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "AAPL",
+      "company_name": "APPLE INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "ABBV",
+      "company_name": "ABBVIE INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "ABNB",
+      "company_name": "AIRBNB INC COM CL A",
+      "asset_type": "Stock",
+      "sector": "internet"
+    },
+    {
+      "symbol": "ABR",
+      "company_name": "ARBOR REALTY TRUST INC COM",
+      "asset_type": "Stock",
+      "sector": "real_estate"
+    },
+    {
+      "symbol": "ABT",
+      "company_name": "ABBOTT LABORATORIES COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "ABTC",
+      "company_name": "AMERICAN BITCOIN CORP. COM CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "ABVX",
+      "company_name": "ABIVAX SA SPONSORED ADS",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "ACHR",
+      "company_name": "ARCHER AVIATION INC COM CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "ACI",
+      "company_name": "ALBERTSONS COMPANIES INC COMMON STOCK",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "ACMR",
+      "company_name": "ACM RESH INC COM CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "ACN",
+      "company_name": "ACCENTURE PLC IRELAND SHS CLASS A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "ADBE",
+      "company_name": "ADOBE INC COM",
+      "asset_type": "Stock",
+      "sector": "software"
+    },
+    {
+      "symbol": "ADI",
+      "company_name": "ANALOG DEVICES INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "ADP",
+      "company_name": "AUTOMATIC DATA PROCESSING INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "ADSK",
+      "company_name": "AUTODESK INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "AEHR",
+      "company_name": "AEHR TEST SYS COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "AEM",
+      "company_name": "AGNICO EAGLE MINES LTD COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "AEO",
+      "company_name": "AMERICAN EAGLE OUTFITTERS INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "AFL",
+      "company_name": "AFLAC INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "AFRM",
+      "company_name": "AFFIRM HLDGS INC COM CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "AG",
+      "company_name": "FIRST MAJESTIC SILVER CORP COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "AGNC",
+      "company_name": "AGNC INVT CORP COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "AGQ",
+      "company_name": "PROSHARES TR II ULTRA SILVER NEW",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "AI",
+      "company_name": "C3 AI INC CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "AIG",
+      "company_name": "AMERICAN INTL GROUP INC COM NEW",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "AKAM",
+      "company_name": "AKAMAI TECHNOLOGIES INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "ALAB",
+      "company_name": "ASTERA LABS INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "ALB",
+      "company_name": "ALBEMARLE CORP COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "ALDX",
+      "company_name": "ALDEYRA THERAPEUTICS INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "ALGN",
+      "company_name": "ALIGN TECHNOLOGY INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "ALT",
+      "company_name": "ALTIMMUNE INC COM NEW",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "AMAT",
+      "company_name": "APPLIED MATLS INC COM",
+      "asset_type": "Stock",
+      "sector": "semiconductor"
+    },
+    {
+      "symbol": "AMBA",
+      "company_name": "AMBARELLA INC SHS",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "AMC",
+      "company_name": "AMC ENTMT HLDGS INC CL A NEW",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "AMD",
+      "company_name": "ADVANCED MICRO DEVICES INC COM",
+      "asset_type": "Stock",
+      "sector": "semiconductor"
+    },
+    {
+      "symbol": "AMGN",
+      "company_name": "AMGEN INC COM",
+      "asset_type": "Stock",
+      "sector": "biotech"
+    },
+    {
+      "symbol": "AMKR",
+      "company_name": "AMKOR TECHNOLOGY INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "AMPG",
+      "company_name": "AMPLITECH GROUP INC COM NEW",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "AMPX",
+      "company_name": "AMPRIUS TECHNOLOGIES INC COMMON STOCK",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "AMZN",
+      "company_name": "AMAZON COM INC COM",
+      "asset_type": "Stock",
+      "sector": "internet"
+    },
+    {
+      "symbol": "ANET",
+      "company_name": "ARISTA NETWORKS INC COM SHS",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "ANF",
+      "company_name": "ABERCROMBIE & FITCH CO CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "ANVS",
+      "company_name": "ANNOVIS BIO INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "APA",
+      "company_name": "APA CORPORATION COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "APLD",
+      "company_name": "APPLIED DIGITAL CORP COM NEW",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "APO",
+      "company_name": "APOLLO GLOBAL MGMT INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "APP",
+      "company_name": "APPLOVIN CORP COM CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "APT",
+      "company_name": "ALPHA PRO TECH LTD COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "AR",
+      "company_name": "ANTERO RESOURCES CORP COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "ARES",
+      "company_name": "ARES MANAGEMENT CORPORATION CL A COM STK",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "ARM",
+      "company_name": "ARM HOLDINGS PLC SPONSORED ADS",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "AS",
+      "company_name": "AMER SPORTS INC COM SHS",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "ASML",
+      "company_name": "ASML HLDG NV N Y REGISTRY SHS",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "ASO",
+      "company_name": "ACADEMY SPORTS & OUTDOORS INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "ASPI",
+      "company_name": "ASP ISOTOPES INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "ASST",
+      "company_name": "STRIVE INC CL A COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "ASTS",
+      "company_name": "AST SPACEMOBILE INC COM CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "AUR",
+      "company_name": "AURORA INNOVATION INC CLASS A COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "AVAV",
+      "company_name": "AEROVIRONMENT INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "AVGO",
+      "company_name": "BROADCOM INC COM",
+      "asset_type": "Stock",
+      "sector": "semiconductor"
+    },
+    {
+      "symbol": "AXON",
+      "company_name": "AXON ENTERPRISE INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "AXP",
+      "company_name": "AMERICAN EXPRESS CO COM",
+      "asset_type": "Stock",
+      "sector": "banking"
+    },
+    {
+      "symbol": "AXTI",
+      "company_name": "AXT INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "B",
+      "company_name": "BARRICK MNG CORP COM SHS",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "BA",
+      "company_name": "BOEING CO COM",
+      "asset_type": "Stock",
+      "sector": "defense"
+    },
+    {
+      "symbol": "BABA",
+      "company_name": "ALIBABA GROUP HLDG LTD SPONSORED ADS",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "BAC",
+      "company_name": "BANK OF AMER CORP COM",
+      "asset_type": "Stock",
+      "sector": "banking"
+    },
+    {
+      "symbol": "BAX",
+      "company_name": "BAXTER INTL INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "BB",
+      "company_name": "BLACKBERRY LTD COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "BBAI",
+      "company_name": "BIGBEAR AI HLDGS INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "BBWI",
+      "company_name": "BATH & BODY WORKS INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "BBY",
+      "company_name": "BEST BUY INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "BE",
+      "company_name": "BLOOM ENERGY CORP COM CL A",
+      "asset_type": "Stock",
+      "sector": "energy"
+    },
+    {
+      "symbol": "BEKE",
+      "company_name": "KE HLDGS INC SPONSORED ADS",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "BHC",
+      "company_name": "BAUSCH HEALTH COS INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "BIDU",
+      "company_name": "BAIDU INC SPON ADR REP A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "BIIB",
+      "company_name": "BIOGEN INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "BILL",
+      "company_name": "BILL HOLDINGS INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "BKKT",
+      "company_name": "BAKKT INC COM CL A NEW",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "BKNG",
+      "company_name": "BOOKING HOLDINGS INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "BLK",
+      "company_name": "BLACKROCK INC COM",
+      "asset_type": "Stock",
+      "sector": "banking"
+    },
+    {
+      "symbol": "BLSH",
+      "company_name": "BULLISH ORD SHS",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "BMNR",
+      "company_name": "BITMINE IMMERSION TECHS INC COM NEW",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "BMY",
+      "company_name": "BRISTOL-MYERS SQUIBB CO COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "BNO",
+      "company_name": "UNITED STS BRENT OIL FD LP UNIT",
+      "asset_type": "Stock",
+      "sector": "energy"
+    },
+    {
+      "symbol": "BOIL",
+      "company_name": "PROSHARES TR II ULTRA BLOOMBERG",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "BP",
+      "company_name": "BP PLC SPONSORED ADR",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "BRK.B",
+      "company_name": "BERKSHIRE HATHAWAY INC DEL CL B NEW",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "BROS",
+      "company_name": "DUTCH BROS INC CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "BRUN",
+      "company_name": "BOOST RUN INC ORD SHS CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "BSX",
+      "company_name": "BOSTON SCIENTIFIC CORP COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "BTBT",
+      "company_name": "BIT DIGITAL INC SHS",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "BTDR",
+      "company_name": "BITDEER TECHNOLOGIES GROUP CL A ORD SHS",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "BTG",
+      "company_name": "B2GOLD CORP COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "BTU",
+      "company_name": "PEABODY ENGR CORP COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "BUD",
+      "company_name": "ANHEUSER BUSCH INBEV SA NV SPONSORED ADR",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "BULL",
+      "company_name": "WEBULL CORP ORD SHS",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "BURL",
+      "company_name": "BURLINGTON STORES INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "BW",
+      "company_name": "BABCOCK & WILCOX ENTERPRISES COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "BX",
+      "company_name": "BLACKSTONE INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "BYND",
+      "company_name": "BEYOND MEAT INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "C",
+      "company_name": "CITIGROUP INC COM NEW",
+      "asset_type": "Stock",
+      "sector": "banking"
+    },
+    {
+      "symbol": "CAG",
+      "company_name": "CONAGRA BRANDS INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "CAH",
+      "company_name": "CARDINAL HEALTH INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "CAPR",
+      "company_name": "CAPRICOR THERAPEUTICS INC COM NEW",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "CAR",
+      "company_name": "AVIS BUDGET GROUP INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "CARR",
+      "company_name": "CARRIER GLOBAL CORPORATION COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "CART",
+      "company_name": "MAPLEBEAR INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "CAT",
+      "company_name": "CATERPILLAR INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "CAVA",
+      "company_name": "CAVA GROUP INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "CBOE",
+      "company_name": "Cboe Global Markets, Inc.",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "CBRS",
+      "company_name": "CEREBRAS SYSTEMS INC COM CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "CBTX",
+      "company_name": "Cboe Bitcoin Index",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "CC",
+      "company_name": "CHEMOURS CO COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "CCJ",
+      "company_name": "CAMECO CORP COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "CCL",
+      "company_name": "CARNIVAL CORP LTD COMMON SHARES",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "CDE",
+      "company_name": "COEUR MNG INC COM NEW",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "CDNS",
+      "company_name": "CADENCE DESIGN SYSTEM INC COM",
+      "asset_type": "Stock",
+      "sector": "software"
+    },
+    {
+      "symbol": "CEG",
+      "company_name": "CONSTELLATION ENERGY CORP COM",
+      "asset_type": "Stock",
+      "sector": "energy"
+    },
+    {
+      "symbol": "CELH",
+      "company_name": "CELSIUS HLDGS INC COM NEW",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "CF",
+      "company_name": "CF INDUSTRIES HOLD COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "CGC",
+      "company_name": "CANOPY GROWTH CORPORATION COM NEW",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "CHTR",
+      "company_name": "CHARTER COMMUNICATIONS INC CL A",
+      "asset_type": "Stock",
+      "sector": "telecom"
+    },
+    {
+      "symbol": "CHWY",
+      "company_name": "CHEWY INC CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "CI",
+      "company_name": "THE CIGNA GROUP COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "CIEN",
+      "company_name": "CIENA CORP COM NEW",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "CIFR",
+      "company_name": "CIPHER DIGITAL INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "CL",
+      "company_name": "COLGATE PALMOLIVE CO COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "CLF",
+      "company_name": "CLEVELAND-CLIFFS INC NEW COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "CLOV",
+      "company_name": "CLOVER HEALTH INVESTMENTS CORP COM CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "CLS",
+      "company_name": "CELESTICA INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "CLSK",
+      "company_name": "CLEANSPARK INC COM NEW",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "CMCSA",
+      "company_name": "COMCAST CORP NEW CL A",
+      "asset_type": "Stock",
+      "sector": "telecom"
+    },
+    {
+      "symbol": "CME",
+      "company_name": "CME GROUP INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "CMG",
+      "company_name": "CHIPOTLE MEXICAN GRILL INC COM",
+      "asset_type": "Stock",
+      "sector": "retail"
+    },
+    {
+      "symbol": "CNC",
+      "company_name": "CENTENE CORP DEL COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "CNQ",
+      "company_name": "CANADIAN NAT RES LTD MED TERM COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "COF",
+      "company_name": "CAPITAL ONE FINL CORP COM",
+      "asset_type": "Stock",
+      "sector": "banking"
+    },
+    {
+      "symbol": "COHR",
+      "company_name": "COHERENT CORP COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "COIN",
+      "company_name": "COINBASE GLOBAL INC COM CL A",
+      "asset_type": "Stock",
+      "sector": "fintech"
+    },
+    {
+      "symbol": "COP",
+      "company_name": "CONOCOPHILLIPS COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "COPX",
+      "company_name": "GLOBAL X FDS GLOBAL X COPPER",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "CORZ",
+      "company_name": "CORE SCIENTIFIC INC NEW COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "COST",
+      "company_name": "COSTCO WHOLESALE CORPORATION COM",
+      "asset_type": "Stock",
+      "sector": "retail"
+    },
+    {
+      "symbol": "CPB",
+      "company_name": "THE CAMPBELLS COMPANY COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "CPNG",
+      "company_name": "COUPANG INC CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "CRCL",
+      "company_name": "CIRCLE INTERNET GROUP INC COM CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "CRDO",
+      "company_name": "CREDO TECHNOLOGY GROUP HOLDING ORDINARY SHARES",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "CRH",
+      "company_name": "CRH PLC ORD",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "CRM",
+      "company_name": "SALESFORCE INC COM",
+      "asset_type": "Stock",
+      "sector": "software"
+    },
+    {
+      "symbol": "CRML",
+      "company_name": "CRITICAL METALS CORP PUBCO ORD SHS",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "CRSP",
+      "company_name": "CRISPR THERAPEUTICS AG NAMEN AKT",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "CRWD",
+      "company_name": "CROWDSTRIKE HLDGS INC CL A",
+      "asset_type": "Stock",
+      "sector": "software"
+    },
+    {
+      "symbol": "CRWV",
+      "company_name": "COREWEAVE INC COM CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "CSCO",
+      "company_name": "CISCO SYS INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "CSIQ",
+      "company_name": "CANADIAN SOLAR INC COM",
+      "asset_type": "Stock",
+      "sector": "energy"
+    },
+    {
+      "symbol": "CSX",
+      "company_name": "CSX CORP COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "CTAS",
+      "company_name": "CINTAS CORP COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "CVNA",
+      "company_name": "CARVANA CO CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "CVS",
+      "company_name": "CVS HEALTH CORP COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "CVX",
+      "company_name": "CHEVRON CORPORATION COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "CYPH",
+      "company_name": "CYPHERPUNK TECHNOLOGIES INC COM NEW",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "CZR",
+      "company_name": "CAESARS ENTERTAINMENT INC NEW COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "DAL",
+      "company_name": "DELTA AIR LINES INC COM NEW",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "DASH",
+      "company_name": "DOORDASH INC CL A",
+      "asset_type": "Stock",
+      "sector": "internet"
+    },
+    {
+      "symbol": "DAVE",
+      "company_name": "DAVE INC CLASS A COM NEW",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "DBRG",
+      "company_name": "DIGITALBRIDGE GROUP INC CL A NEW",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "DBX",
+      "company_name": "DROPBOX INC CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "DDOG",
+      "company_name": "DATADOG INC CL A COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "DE",
+      "company_name": "DEERE & CO COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "DECK",
+      "company_name": "DECKERS OUTDOOR CORP COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "DELL",
+      "company_name": "DELL TECHNOLOGIES INC CL C",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "DG",
+      "company_name": "DOLLAR GEN CORP COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "DHI",
+      "company_name": "D R HORTON INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "DHR",
+      "company_name": "DANAHER CORP DEL COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "DIA",
+      "company_name": "STATE STR SPDR DOW JONES INDL UT SER 1",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "DIS",
+      "company_name": "DISNEY WALT CO COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "DJT",
+      "company_name": "TRUMP MEDIA & TECHNOLOGY GROUP COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "DJX",
+      "company_name": "Dow Jones Industrial Average",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "DKNG",
+      "company_name": "DRAFTKINGS INC NEW COM CL A",
+      "asset_type": "Stock",
+      "sector": "retail"
+    },
+    {
+      "symbol": "DKS",
+      "company_name": "DICKS SPORTING GOODS INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "DLR",
+      "company_name": "DIGITAL RLTY TR INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "DLTR",
+      "company_name": "DOLLAR TREE INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "DNN",
+      "company_name": "DENISON MINES CORP COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "DNUT",
+      "company_name": "KRISPY KREME INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "DOCN",
+      "company_name": "DIGITALOCEAN HLDGS INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "DOCU",
+      "company_name": "DOCUSIGN INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "DOW",
+      "company_name": "DOW HLDGS INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "DPRO",
+      "company_name": "DRAGANFLY INC. COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "DUOL",
+      "company_name": "DUOLINGO INC CL A COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "DVN",
+      "company_name": "DEVON ENERGY CORP NEW COM",
+      "asset_type": "Stock",
+      "sector": "energy"
+    },
+    {
+      "symbol": "DXCM",
+      "company_name": "DEXCOM INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "EBAY",
+      "company_name": "EBAY INC. COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "ECHO",
+      "company_name": "ECHOSTAR CORP CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "EL",
+      "company_name": "LAUDER ESTEE COS INC CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "ELF",
+      "company_name": "E L F BEAUTY INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "EMR",
+      "company_name": "EMERSON ELEC CO COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "ENPH",
+      "company_name": "ENPHASE ENERGY INC COM",
+      "asset_type": "Stock",
+      "sector": "energy"
+    },
+    {
+      "symbol": "ENVX",
+      "company_name": "ENOVIX CORPORATION COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "EOG",
+      "company_name": "EOG RES INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "EOSE",
+      "company_name": "EOS ENERGY ENTERPRISES INC COM CL A",
+      "asset_type": "Stock",
+      "sector": "energy"
+    },
+    {
+      "symbol": "EPD",
+      "company_name": "ENTERPRISE PRODS PARTNERS L P COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "EQT",
+      "company_name": "EQT CORP COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "ET",
+      "company_name": "ENERGY TRANSFER L P COM UT LTD PTN",
+      "asset_type": "Stock",
+      "sector": "energy"
+    },
+    {
+      "symbol": "ETH",
+      "company_name": "GRAYSCALE ETHEREUM STAKING SHS NEW",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "ETHA",
+      "company_name": "ISHARES ETHEREUM TR SHS",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "ETN",
+      "company_name": "EATON CORP PLC SHS",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "ETSY",
+      "company_name": "ETSY INC COM",
+      "asset_type": "Stock",
+      "sector": "internet"
+    },
+    {
+      "symbol": "EXE",
+      "company_name": "EXPAND ENERGY CORPORATION COM",
+      "asset_type": "Stock",
+      "sector": "energy"
+    },
+    {
+      "symbol": "EXPE",
+      "company_name": "EXPEDIA GROUP INC COM NEW",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "F",
+      "company_name": "FORD MTR CO COM",
+      "asset_type": "Stock",
+      "sector": "auto"
+    },
+    {
+      "symbol": "FBTC",
+      "company_name": "Fidelity Wise Origin Bitcoin Fund",
+      "asset_type": "Stock",
+      "sector": "fintech"
+    },
+    {
+      "symbol": "FCEL",
+      "company_name": "FUELCELL ENERGY INC COM NEW",
+      "asset_type": "Stock",
+      "sector": "energy"
+    },
+    {
+      "symbol": "FCX",
+      "company_name": "FREEPORT MCMORAN INC CL B",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "FDX",
+      "company_name": "FEDEX CORP COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "FIG",
+      "company_name": "FIGMA INC CLASS A COM STK",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "FIGR",
+      "company_name": "FIGURE TECHNOLOGY SOLUTIO COM CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "FIS",
+      "company_name": "FIDELITY NATL INFORMATION SVCS COM",
+      "asset_type": "Stock",
+      "sector": "fintech"
+    },
+    {
+      "symbol": "FISV",
+      "company_name": "FISERV INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "FLY",
+      "company_name": "FIREFLY AEROSPACE INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "FRMI",
+      "company_name": "FERMI INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "FSLR",
+      "company_name": "FIRST SOLAR INC COM",
+      "asset_type": "Stock",
+      "sector": "energy"
+    },
+    {
+      "symbol": "FSLY",
+      "company_name": "FASTLY INC CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "FTAI",
+      "company_name": "FTAI AVIATION LTD SHS",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "FTNT",
+      "company_name": "FORTINET INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "FUBO",
+      "company_name": "FUBOTV INC COM NEW CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "FUTU",
+      "company_name": "FUTU HLDGS LTD SPON ADS CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "GAP",
+      "company_name": "GAP INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "GD",
+      "company_name": "GENERAL DYNAMICS CORP COM",
+      "asset_type": "Stock",
+      "sector": "defense"
+    },
+    {
+      "symbol": "GDDY",
+      "company_name": "GODADDY INC CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "GE",
+      "company_name": "GE AEROSPACE COM NEW",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "GEHC",
+      "company_name": "GE HEALTHCARE TECHNOLOGIES INC COMMON STOCK",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "GEMI",
+      "company_name": "GEMINI SPACE STA INC CL A COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "GEV",
+      "company_name": "GE VERNOVA INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "GILD",
+      "company_name": "GILEAD SCIENCES INC COM",
+      "asset_type": "Stock",
+      "sector": "biotech"
+    },
+    {
+      "symbol": "GLD",
+      "company_name": "SPDR GOLD TR GOLD SHS",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "GLW",
+      "company_name": "CORNING INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "GLXY",
+      "company_name": "GALAXY DIGITAL INC. CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "GM",
+      "company_name": "GENERAL MTRS CO COM",
+      "asset_type": "Stock",
+      "sector": "auto"
+    },
+    {
+      "symbol": "GME",
+      "company_name": "GAMESTOP CORP CL A",
+      "asset_type": "Stock",
+      "sector": "retail"
+    },
+    {
+      "symbol": "GNRC",
+      "company_name": "GENERAC HLDGS INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "GOOG",
+      "company_name": "ALPHABET INC CAP STK CL C",
+      "asset_type": "Stock",
+      "sector": "internet"
+    },
+    {
+      "symbol": "GOOGL",
+      "company_name": "ALPHABET INC CAP STK CL A",
+      "asset_type": "Stock",
+      "sector": "internet"
+    },
+    {
+      "symbol": "GOOS",
+      "company_name": "CANADA GOOSE HLDGS INC SHS SUB VTG",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "GRAB",
+      "company_name": "GRAB HOLDINGS LIMITED CLASS A ORD",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "GRRR",
+      "company_name": "GORILLA TECHNOLOGY GROUP INC SHS NEW",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "GS",
+      "company_name": "GOLDMAN SACHS GROUP INC COM",
+      "asset_type": "Stock",
+      "sector": "banking"
+    },
+    {
+      "symbol": "GSK",
+      "company_name": "GSK PLC SPONSORED ADR",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "GTLB",
+      "company_name": "GITLAB INC CLASS A COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "GTM",
+      "company_name": "ZOOMINFO TECHNOLOGIES INC COMMON STOCK",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "HAL",
+      "company_name": "HALLIBURTON CO COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "HD",
+      "company_name": "HOME DEPOT INC COM",
+      "asset_type": "Stock",
+      "sector": "retail"
+    },
+    {
+      "symbol": "HIMS",
+      "company_name": "HIMS & HERS HEALTH INC COM CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "HIVE",
+      "company_name": "HIVE DIGITAL TECHNOLOGIES LTD COM NEW",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "HL",
+      "company_name": "HECLA MINING COMPANY COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "HLF",
+      "company_name": "HERBALIFE LTD COM SHS",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "HLT",
+      "company_name": "HILTON WORLDWIDE HLDGS INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "HOG",
+      "company_name": "HARLEY DAVIDSON INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "HON",
+      "company_name": "HONEYWELL INTL INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "HOOD",
+      "company_name": "ROBINHOOD MKTS INC COM CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "HPE",
+      "company_name": "HEWLETT PACKARD ENTERPRISE CO COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "HPQ",
+      "company_name": "HP INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "HRL",
+      "company_name": "HORMEL FOODS CORP COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "HSBC",
+      "company_name": "HSBC HLDGS PLC SPON ADR NEW",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "HSY",
+      "company_name": "HERSHEY CO COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "HTZ",
+      "company_name": "HERTZ GLOBAL HLDGS INC COM NEW",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "HUM",
+      "company_name": "HUMANA INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "HUT",
+      "company_name": "HUT 8 CORP COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "HWM",
+      "company_name": "HOWMET AEROSPACE INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "IAU",
+      "company_name": "ISHARES GOLD TR ISHARES NEW",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "IBKR",
+      "company_name": "INTERACTIVE BROKERS GROUP INC COM CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "IBM",
+      "company_name": "INTERNATIONAL BUSINESS MACHS COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "IBRX",
+      "company_name": "IMMUNITYBIO INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "ICE",
+      "company_name": "INTERCONTINENTAL EXCHANGE INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "IEF",
+      "company_name": "ISHARES TR 7-10 YR TRSY BD",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "INFQ",
+      "company_name": "INFLEQTION INC COM SHS",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "INO",
+      "company_name": "INOVIO PHARMACEUTICALS INC COM SHS",
+      "asset_type": "Stock",
+      "sector": "biotech"
+    },
+    {
+      "symbol": "INOD",
+      "company_name": "INNODATA INC COM NEW",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "INTC",
+      "company_name": "INTEL CORP COM",
+      "asset_type": "Stock",
+      "sector": "semiconductor"
+    },
+    {
+      "symbol": "INTU",
+      "company_name": "INTUIT COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "IONQ",
+      "company_name": "IONQ INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "IOT",
+      "company_name": "SAMSARA INC COM CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "IOVA",
+      "company_name": "IOVANCE BIOTHERAPEUTICS INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "IP",
+      "company_name": "INTERNATIONAL PAPER CO COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "IQ",
+      "company_name": "IQIYI INC SPONSORED ADS",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "IREN",
+      "company_name": "IREN LIMITED ORDINARY SHARES",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "IRM",
+      "company_name": "IRON MTN INC DEL COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "ISRG",
+      "company_name": "INTUITIVE SURGICAL INC COM NEW",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "JBL",
+      "company_name": "JABIL INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "JBLU",
+      "company_name": "JETBLUE AIRWAYS CORP COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "JD",
+      "company_name": "JD.COM INC SPON ADS CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "JMIA",
+      "company_name": "JUMIA TECHNOLOGIES AG SPONSORED ADS",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "JNJ",
+      "company_name": "JOHNSON & JOHNSON COM",
+      "asset_type": "Stock",
+      "sector": "biotech"
+    },
+    {
+      "symbol": "JOBY",
+      "company_name": "JOBY AVIATION INC COMMON STOCK",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "JPM",
+      "company_name": "JPMORGAN CHASE & CO COM",
+      "asset_type": "Stock",
+      "sector": "banking"
+    },
+    {
+      "symbol": "KEEL",
+      "company_name": "KEEL INFRASTRUCTURE CORP COM SHS",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "KGC",
+      "company_name": "KINROSS GOLD CORP COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "KHC",
+      "company_name": "KRAFT HEINZ CO COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "KKR",
+      "company_name": "KKR & CO INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "KLAC",
+      "company_name": "KLA CORP COM NEW",
+      "asset_type": "Stock",
+      "sector": "semiconductor"
+    },
+    {
+      "symbol": "KLAR",
+      "company_name": "KLARNA GROUP PLC SHS",
+      "asset_type": "Stock",
+      "sector": "semiconductor"
+    },
+    {
+      "symbol": "KMB",
+      "company_name": "KIMBERLY-CLARK CORP COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "KMI",
+      "company_name": "KINDER MORGAN INC DEL COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "KO",
+      "company_name": "COCA COLA CO COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "KOLD",
+      "company_name": "PROSHARES TR II ULSHT BLOOMB GAS",
+      "asset_type": "Stock",
+      "sector": "energy"
+    },
+    {
+      "symbol": "KOPN",
+      "company_name": "KOPIN CORP COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "KR",
+      "company_name": "KROGER CO COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "KRE",
+      "company_name": "SPDR SERIES TRUST ST STR SP REGBNK",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "KSS",
+      "company_name": "KOHLS CORP COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "KTOS",
+      "company_name": "KRATOS DEFENSE & SEC SOLUTIONS COM NEW",
+      "asset_type": "Stock",
+      "sector": "defense"
+    },
+    {
+      "symbol": "KVUE",
+      "company_name": "KENVUE INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "KWEB",
+      "company_name": "KRANESHARES TRUST CSI CHI INTERNET",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "LAC",
+      "company_name": "LITHIUM AMERS CORP NEW COM SHS",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "LAES",
+      "company_name": "SEALSQ CORP ORD SHS",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "LASE",
+      "company_name": "LASER PHOTONICS CORP COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "LASR",
+      "company_name": "NLIGHT INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "LCID",
+      "company_name": "LUCID GROUP INC COM NEW",
+      "asset_type": "Stock",
+      "sector": "auto"
+    },
+    {
+      "symbol": "LDI",
+      "company_name": "LOANDEPOT INC COM CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "LEN",
+      "company_name": "LENNAR CORP CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "LHX",
+      "company_name": "L3HARRIS TECHNOLOGIES INC COM",
+      "asset_type": "Stock",
+      "sector": "defense"
+    },
+    {
+      "symbol": "LI",
+      "company_name": "LI AUTO INC SPONSORED ADS",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "LITE",
+      "company_name": "LUMENTUM HLDGS INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "LLY",
+      "company_name": "ELI LILLY & CO COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "LMND",
+      "company_name": "LEMONADE INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "LMT",
+      "company_name": "LOCKHEED MARTIN CORP COM",
+      "asset_type": "Stock",
+      "sector": "defense"
+    },
+    {
+      "symbol": "LNG",
+      "company_name": "CHENIERE ENERGY INC COM NEW",
+      "asset_type": "Stock",
+      "sector": "energy"
+    },
+    {
+      "symbol": "LOW",
+      "company_name": "LOWES COS INC COM",
+      "asset_type": "Stock",
+      "sector": "retail"
+    },
+    {
+      "symbol": "LQDA",
+      "company_name": "LIQUIDIA CORPORATION COM NEW",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "LRCX",
+      "company_name": "LAM RESEARCH CORP COM NEW",
+      "asset_type": "Stock",
+      "sector": "semiconductor"
+    },
+    {
+      "symbol": "LULU",
+      "company_name": "LULULEMON ATHLETICA INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "LUMN",
+      "company_name": "LUMEN TECHNOLOGIES INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "LUNR",
+      "company_name": "INTUITIVE MACHINES INC CLASS A COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "LUV",
+      "company_name": "SOUTHWEST AIRLS CO COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "LVS",
+      "company_name": "LAS VEGAS SANDS CORP COM",
+      "asset_type": "Stock",
+      "sector": "energy"
+    },
+    {
+      "symbol": "LYFT",
+      "company_name": "LYFT INC CL A COM",
+      "asset_type": "Stock",
+      "sector": "internet"
+    },
+    {
+      "symbol": "LYV",
+      "company_name": "LIVE NATION ENTERTAINMENT INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "M",
+      "company_name": "MACYS INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "MA",
+      "company_name": "MASTERCARD INCORPORATED CL A",
+      "asset_type": "Stock",
+      "sector": "fintech"
+    },
+    {
+      "symbol": "MAR",
+      "company_name": "MARRIOTT INTL INC NEW CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "MARA",
+      "company_name": "MARA HOLDINGS INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "MBLY",
+      "company_name": "MOBILEYE GLOBAL INC COMMON CLASS A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "MBTX",
+      "company_name": "Cboe Mini Bitcoin Index",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "MCD",
+      "company_name": "MCDONALDS CORP COM",
+      "asset_type": "Stock",
+      "sector": "retail"
+    },
+    {
+      "symbol": "MCHP",
+      "company_name": "MICROCHIP TECHNOLOGY INC. COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "MDB",
+      "company_name": "MONGODB INC CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "MDLZ",
+      "company_name": "MONDELEZ INTL INC CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "MDT",
+      "company_name": "MEDTRONIC PLC SHS",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "MELI",
+      "company_name": "MERCADOLIBRE INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "META",
+      "company_name": "META PLATFORMS INC CL A",
+      "asset_type": "Stock",
+      "sector": "internet"
+    },
+    {
+      "symbol": "MGTN",
+      "company_name": "CBOE Magnificent 10 Index",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "MMM",
+      "company_name": "3M CO COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "MNKD",
+      "company_name": "MANNKIND CORP COM NEW",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "MO",
+      "company_name": "ALTRIA GROUP INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "MOS",
+      "company_name": "MOSAIC CO COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "MP",
+      "company_name": "MP MATERIALS CORP COM CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "MPT",
+      "company_name": "MEDICAL PROPERTIES TRUST INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "MRK",
+      "company_name": "MERCK & CO INC COM",
+      "asset_type": "Stock",
+      "sector": "biotech"
+    },
+    {
+      "symbol": "MRNA",
+      "company_name": "MODERNA INC COM",
+      "asset_type": "Stock",
+      "sector": "biotech"
+    },
+    {
+      "symbol": "MRUT",
+      "company_name": "Mini Russell 2000 Index",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "MRVL",
+      "company_name": "MARVELL TECHNOLOGY INC COM",
+      "asset_type": "Stock",
+      "sector": "semiconductor"
+    },
+    {
+      "symbol": "MS",
+      "company_name": "MORGAN STANLEY COM NEW",
+      "asset_type": "Stock",
+      "sector": "banking"
+    },
+    {
+      "symbol": "MSFT",
+      "company_name": "MICROSOFT CORP COM",
+      "asset_type": "Stock",
+      "sector": "software"
+    },
+    {
+      "symbol": "MSTR",
+      "company_name": "STRATEGY INC CL A NEW",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "MT",
+      "company_name": "ARCELORMITTAL SA LUXEMBOURG NY REGISTRY SH",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "MU",
+      "company_name": "MICRON TECHNOLOGY INC COM",
+      "asset_type": "Stock",
+      "sector": "semiconductor"
+    },
+    {
+      "symbol": "MVIS",
+      "company_name": "MICROVISION INC DEL COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "NAK",
+      "company_name": "NORTHERN DYNASTY MINERALS LTD COM NEW",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "NANOS",
+      "company_name": "NANOS Index",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "NB",
+      "company_name": "NIOCORP DEVS LTD COM NEW",
+      "asset_type": "Stock",
+      "sector": "auto"
+    },
+    {
+      "symbol": "NBIS",
+      "company_name": "NEBIUS GROUP N.V. SHS CLASS A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "NCLH",
+      "company_name": "NORWEGIAN CRUISE LINE HLDGS LT SHS",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "NDAQ",
+      "company_name": "NASDAQ INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "NEE",
+      "company_name": "NEXTERA ENERGY INC COM",
+      "asset_type": "Stock",
+      "sector": "energy"
+    },
+    {
+      "symbol": "NEM",
+      "company_name": "NEWMONT CORP COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "NET",
+      "company_name": "CLOUDFLARE INC CL A COM",
+      "asset_type": "Stock",
+      "sector": "software"
+    },
+    {
+      "symbol": "NFE",
+      "company_name": "NEW FORTRESS ENERGY INC COM CL A",
+      "asset_type": "Stock",
+      "sector": "energy"
+    },
+    {
+      "symbol": "NIO",
+      "company_name": "NIO INC SPON ADS",
+      "asset_type": "Stock",
+      "sector": "auto"
+    },
+    {
+      "symbol": "NKE",
+      "company_name": "NIKE INC CL B",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "NLY",
+      "company_name": "ANNALY CAPITAL MANAGEMENT INC COM NEW",
+      "asset_type": "Stock",
+      "sector": "real_estate"
+    },
+    {
+      "symbol": "NMAX",
+      "company_name": "NEWSMAX INC COM SHS CLASS B",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "NN",
+      "company_name": "NEXTNAV INC COMMON STOCK",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "NNE",
+      "company_name": "NANO NUCLEAR ENERGY INC COM",
+      "asset_type": "Stock",
+      "sector": "energy"
+    },
+    {
+      "symbol": "NOK",
+      "company_name": "NOKIA CORP SPONSORED ADR",
+      "asset_type": "Stock",
+      "sector": "telecom"
+    },
+    {
+      "symbol": "NOW",
+      "company_name": "SERVICENOW INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "NRG",
+      "company_name": "NRG ENERGY INC COM NEW",
+      "asset_type": "Stock",
+      "sector": "energy"
+    },
+    {
+      "symbol": "NTR",
+      "company_name": "NUTRIEN LTD COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "NU",
+      "company_name": "NU HLDGS LTD ORD SHS CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "NUAI",
+      "company_name": "NEW ERA ENERGY & DIGITAL INC COM",
+      "asset_type": "Stock",
+      "sector": "energy"
+    },
+    {
+      "symbol": "NVAX",
+      "company_name": "NOVAVAX INC COM NEW",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "NVDA",
+      "company_name": "NVIDIA CORPORATION COM",
+      "asset_type": "Stock",
+      "sector": "semiconductor"
+    },
+    {
+      "symbol": "NVO",
+      "company_name": "NOVO-NORDISK A S ADR",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "NVTS",
+      "company_name": "NAVITAS SEMICONDUCTOR CORP COM",
+      "asset_type": "Stock",
+      "sector": "semiconductor"
+    },
+    {
+      "symbol": "ODD",
+      "company_name": "ODDITY TECH LTD SHS CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "OEX",
+      "company_name": "S&P 100 index American-style",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "OKLO",
+      "company_name": "OKLO INC COM CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "OKTA",
+      "company_name": "OKTA INC CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "ON",
+      "company_name": "ON SEMICONDUCTOR CORP COM",
+      "asset_type": "Stock",
+      "sector": "semiconductor"
+    },
+    {
+      "symbol": "ONDS",
+      "company_name": "ONDAS INC COM NEW",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "ONON",
+      "company_name": "ON HLDG AG NAMEN AKT A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "OPEN",
+      "company_name": "OPENDOOR TECHNOLOGIES INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "ORBS",
+      "company_name": "EIGHTCO HOLDINGS INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "ORCL",
+      "company_name": "ORACLE CORP COM",
+      "asset_type": "Stock",
+      "sector": "software"
+    },
+    {
+      "symbol": "OSCR",
+      "company_name": "OSCAR HEALTH INC CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "OUST",
+      "company_name": "OUSTER INC COM NEW",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "OWL",
+      "company_name": "BLUE OWL CAPITAL INC COM CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "OXY",
+      "company_name": "OCCIDENTAL PETE CORP COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "PAA",
+      "company_name": "PLAINS ALL AMERN PIPELINE L P UNIT LTD PARTN",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "PAAS",
+      "company_name": "PAN AMERN SILVER CORP COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "PANW",
+      "company_name": "PALO ALTO NETWORKS INC COM",
+      "asset_type": "Stock",
+      "sector": "software"
+    },
+    {
+      "symbol": "PATH",
+      "company_name": "UIPATH INC CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "PBR",
+      "company_name": "PETROLEO BRASILEIRO S A SPONSORED ADR",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "PCG",
+      "company_name": "PG&E CORP COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "PCT",
+      "company_name": "PURECYCLE TECHNOLOGIES INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "PDD",
+      "company_name": "PDD HOLDINGS INC SPONSORED ADS",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "PDSB",
+      "company_name": "PDS BIOTECHNOLOGY CORP COM",
+      "asset_type": "Stock",
+      "sector": "biotech"
+    },
+    {
+      "symbol": "PEP",
+      "company_name": "PEPSICO INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "PFE",
+      "company_name": "PFIZER INC COM",
+      "asset_type": "Stock",
+      "sector": "biotech"
+    },
+    {
+      "symbol": "PG",
+      "company_name": "PROCTER & GAMBLE CO COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "PGR",
+      "company_name": "PROGRESSIVE CORP COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "PHM",
+      "company_name": "PULTE GROUP INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "PINS",
+      "company_name": "PINTEREST INC CL A",
+      "asset_type": "Stock",
+      "sector": "internet"
+    },
+    {
+      "symbol": "PL",
+      "company_name": "PLANET LABS PBC COM CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "PLTR",
+      "company_name": "PALANTIR TECHNOLOGIES INC CL A",
+      "asset_type": "Stock",
+      "sector": "software"
+    },
+    {
+      "symbol": "PLUG",
+      "company_name": "PLUG PWR INC COM NEW",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "PM",
+      "company_name": "PHILIP MORRIS INTL INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "PNC",
+      "company_name": "PNC FINL SVCS GROUP INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "POET",
+      "company_name": "POET TECHNOLOGIES INC COM NEW",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "PONY",
+      "company_name": "PONY AI INC SPONSORED ADS",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "PPG",
+      "company_name": "PPG INDS INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "PSKY",
+      "company_name": "PARAMOUNT SKYDANCE CORP COM CL B",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "PSX",
+      "company_name": "PHILLIPS 66 COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "PTON",
+      "company_name": "PELOTON INTERACTIVE INC CL A COM",
+      "asset_type": "Stock",
+      "sector": "retail"
+    },
+    {
+      "symbol": "PURR",
+      "company_name": "HYPERLIQUID STRATEGIES INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "PYPL",
+      "company_name": "PAYPAL HLDGS INC COM",
+      "asset_type": "Stock",
+      "sector": "fintech"
+    },
+    {
+      "symbol": "QBTS",
+      "company_name": "D-WAVE QUANTUM INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "QCOM",
+      "company_name": "QUALCOMM INC COM",
+      "asset_type": "Stock",
+      "sector": "semiconductor"
+    },
+    {
+      "symbol": "QQQ",
+      "company_name": "INVESCO QQQ TR UNIT SER 1",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "QS",
+      "company_name": "QUANTUMSCAPE CORP COM CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "QSI",
+      "company_name": "QUANTUM SI INC COM CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "QUBT",
+      "company_name": "QUANTUM COMPUTING INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "QXO",
+      "company_name": "QXO INC COM NEW",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "RACE",
+      "company_name": "FERRARI N V COM",
+      "asset_type": "Stock",
+      "sector": "auto"
+    },
+    {
+      "symbol": "RARE",
+      "company_name": "ULTRAGENYX PHARMACEUTICAL INC COM",
+      "asset_type": "Stock",
+      "sector": "biotech"
+    },
+    {
+      "symbol": "RBLX",
+      "company_name": "ROBLOX CORP CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "RBRK",
+      "company_name": "RUBRIK INC. CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "RCAT",
+      "company_name": "RED CAT HLDGS INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "RCL",
+      "company_name": "ROYAL CARIBBEAN GROUP COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "RDDT",
+      "company_name": "REDDIT INC CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "RDW",
+      "company_name": "REDWIRE CORPORATION COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "REGN",
+      "company_name": "REGENERON PHARMACEUTICALS COM",
+      "asset_type": "Stock",
+      "sector": "biotech"
+    },
+    {
+      "symbol": "REPL",
+      "company_name": "REPLIMUNE GROUP INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "RGTI",
+      "company_name": "RIGETTI COMPUTING INC COMMON STOCK",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "RH",
+      "company_name": "RH COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "RIG",
+      "company_name": "TRANSOCEAN LTD REGISTERED SHS",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "RILY",
+      "company_name": "BRC GROUP HOLDINGS INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "RIOT",
+      "company_name": "RIOT PLATFORMS INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "RIVN",
+      "company_name": "RIVIAN AUTOMOTIVE INC COM CL A",
+      "asset_type": "Stock",
+      "sector": "auto"
+    },
+    {
+      "symbol": "RKLB",
+      "company_name": "ROCKET LAB CORP COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "RKT",
+      "company_name": "ROCKET COS INC COM CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "RNG",
+      "company_name": "RINGCENTRAL INC CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "ROKU",
+      "company_name": "ROKU INC COM CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "ROST",
+      "company_name": "ROSS STORES INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "RR",
+      "company_name": "RICHTECH ROBOTICS INC CL B",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "RSP",
+      "company_name": "INVESCO EXCHANGE TRADED FD TR S&P500 EQL WGT",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "RTX",
+      "company_name": "RTX CORPORATION COM",
+      "asset_type": "Stock",
+      "sector": "defense"
+    },
+    {
+      "symbol": "RUM",
+      "company_name": "RUM GROUP INC COM CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "RUN",
+      "company_name": "SUNRUN INC COM",
+      "asset_type": "Stock",
+      "sector": "energy"
+    },
+    {
+      "symbol": "RUT",
+      "company_name": "Russell 2000 Index",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "RXRX",
+      "company_name": "RECURSION PHARMACEUTICALS INC CL A",
+      "asset_type": "Stock",
+      "sector": "biotech"
+    },
+    {
+      "symbol": "RXT",
+      "company_name": "RACKSPACE TECHNOLOGY INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "RZLV",
+      "company_name": "REZOLVE AI PLC ORD SHS",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "S",
+      "company_name": "SENTINELONE INC CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "SAP",
+      "company_name": "SAP SE SPON ADR",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "SBET",
+      "company_name": "SHARPLINK INC COM NEW",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "SBUX",
+      "company_name": "STARBUCKS CORP COM",
+      "asset_type": "Stock",
+      "sector": "retail"
+    },
+    {
+      "symbol": "SCCO",
+      "company_name": "SOUTHERN COPPER CORP COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "SCHD",
+      "company_name": "SCHWAB STRATEGIC TR US DIVIDEND EQ",
+      "asset_type": "Stock",
+      "sector": "banking"
+    },
+    {
+      "symbol": "SCHW",
+      "company_name": "CHARLES SCHWAB CORP (THE) COM",
+      "asset_type": "Stock",
+      "sector": "banking"
+    },
+    {
+      "symbol": "SCO",
+      "company_name": "PROSHARES TR II ULSHT BLOOMB OIL",
+      "asset_type": "Stock",
+      "sector": "energy"
+    },
+    {
+      "symbol": "SE",
+      "company_name": "SEA LTD SPONSORD ADS",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "SEDG",
+      "company_name": "SOLAREDGE TECHNOLOGIES INC COM",
+      "asset_type": "Stock",
+      "sector": "energy"
+    },
+    {
+      "symbol": "SERV",
+      "company_name": "SERVE ROBOTICS INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "SG",
+      "company_name": "SWEETGREEN INC COM CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "SHAK",
+      "company_name": "SHAKE SHACK INC CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "SHEL",
+      "company_name": "SHELL PLC SPON ADS",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "SHOP",
+      "company_name": "SHOPIFY INC CL A SUB VTG SHS",
+      "asset_type": "Stock",
+      "sector": "software"
+    },
+    {
+      "symbol": "SIG",
+      "company_name": "SIGNET JEWELERS LTD SHS",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "SIRI",
+      "company_name": "SIRIUSXM HOLDINGS INC COMMON STOCK",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "SKHY",
+      "company_name": "SK HYNIX INC AMERICAN DEPOSIT",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "SLB",
+      "company_name": "SLB LIMITED COM STK",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "SLS",
+      "company_name": "SELLAS LIFE SCIENCES GROUP INC COM NEW",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "SLV",
+      "company_name": "ISHARES SILVER TR ISHARES",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "SMCI",
+      "company_name": "SUPER MICRO COMPUTER INC COM NEW",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "SMMT",
+      "company_name": "SUMMIT THERAPEUTICS INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "SMR",
+      "company_name": "NUSCALE PWR CORP CL A COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "SMTC",
+      "company_name": "SEMTECH CORP COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "SNAP",
+      "company_name": "SNAP INC CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "SNDK",
+      "company_name": "SANDISK CORP COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "SNOW",
+      "company_name": "SNOWFLAKE INC COM SHS",
+      "asset_type": "Stock",
+      "sector": "software"
+    },
+    {
+      "symbol": "SNPS",
+      "company_name": "SYNOPSYS INC COM",
+      "asset_type": "Stock",
+      "sector": "software"
+    },
+    {
+      "symbol": "SO",
+      "company_name": "SOUTHERN CO COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "SOC",
+      "company_name": "SABLE OFFSHORE CORP COM SHS",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "SOFI",
+      "company_name": "SOFI TECHNOLOGIES INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "SONY",
+      "company_name": "SONY GROUP CORP SPONSORED ADR",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "SOUN",
+      "company_name": "SOUNDHOUND AI INC CLASS A COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "SOXX",
+      "company_name": "ISHARES TR ISHARES SEMICDTR",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "SPCE",
+      "company_name": "VIRGIN GALACTIC HOLDINGS INC COM NEW",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "SPCX",
+      "company_name": "SPACE EXPLORATION TECHN CORP CLASS A COM STK",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "SPEQX",
+      "company_name": "SP500 Equal Weight Index",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "SPGI",
+      "company_name": "S&P GLOBAL INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "SPOT",
+      "company_name": "SPOTIFY TECHNOLOGY S A SHS",
+      "asset_type": "Stock",
+      "sector": "internet"
+    },
+    {
+      "symbol": "SPX",
+      "company_name": "SPX",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "SQQQ",
+      "company_name": "PROSHARES TR ULTRAPRO SHORT",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "SRPT",
+      "company_name": "SAREPTA THERAPEUTICS INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "SSO",
+      "company_name": "PROSHARES TR PSHS ULT S&P 500",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "STLA",
+      "company_name": "STELLANTIS N.V SHS",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "STM",
+      "company_name": "STMICROELECTRONICS N V NY REGISTRY",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "STUB",
+      "company_name": "STUBHUB HLDGS INC CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "STX",
+      "company_name": "SEAGATE TECHNOLOGY HLDNGS PLC ORD SHS",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "STZ",
+      "company_name": "CONSTELLATION BRANDS INC CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "SU",
+      "company_name": "SUNCOR ENERGY INC NEW COM",
+      "asset_type": "Stock",
+      "sector": "energy"
+    },
+    {
+      "symbol": "SVIA",
+      "company_name": "SILVIA INC COM SHS",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "SYM",
+      "company_name": "SYMBOTIC INC CLASS A COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "T",
+      "company_name": "AT&T INC COM",
+      "asset_type": "Stock",
+      "sector": "telecom"
+    },
+    {
+      "symbol": "TDOC",
+      "company_name": "TELADOC HEALTH INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "TE",
+      "company_name": "T1 ENERGY INC COM NEW",
+      "asset_type": "Stock",
+      "sector": "energy"
+    },
+    {
+      "symbol": "TEAM",
+      "company_name": "ATLASSIAN CORPORATION CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "TECK",
+      "company_name": "TECK RESOURCES LTD CL B",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "TEM",
+      "company_name": "TEMPUS AI INC CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "TER",
+      "company_name": "TERADYNE INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "TEVA",
+      "company_name": "TEVA PHARMACEUTICAL INDS LTD SHS",
+      "asset_type": "Stock",
+      "sector": "biotech"
+    },
+    {
+      "symbol": "TGT",
+      "company_name": "TARGET CORP COM",
+      "asset_type": "Stock",
+      "sector": "retail"
+    },
+    {
+      "symbol": "TIGR",
+      "company_name": "UP FINTECH HLDG LTD SPONSORED ADS",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "TJX",
+      "company_name": "TJX COS INC NEW COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "TLN",
+      "company_name": "TALEN ENERGY CORP COM",
+      "asset_type": "Stock",
+      "sector": "energy"
+    },
+    {
+      "symbol": "TLRY",
+      "company_name": "TILRAY BRANDS INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "TMC",
+      "company_name": "TMC THE METALS COMPANY INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "TMDX",
+      "company_name": "TRANSMEDICS GROUP INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "TMO",
+      "company_name": "THERMO FISHER SCIENTIFIC INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "TMUS",
+      "company_name": "T-MOBILE US INC COM",
+      "asset_type": "Stock",
+      "sector": "telecom"
+    },
+    {
+      "symbol": "TOST",
+      "company_name": "TOAST INC CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "TPR",
+      "company_name": "TAPESTRY INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "TQQQ",
+      "company_name": "PROSHARES TR ULTRAPRO QQQ",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "TRIP",
+      "company_name": "TRIPADVISOR INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "TSCO",
+      "company_name": "TRACTOR SUPPLY CO COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "TSEM",
+      "company_name": "TOWER SEMICONDUCTOR LTD SHS NEW",
+      "asset_type": "Stock",
+      "sector": "semiconductor"
+    },
+    {
+      "symbol": "TSLA",
+      "company_name": "TESLA INC COM",
+      "asset_type": "Stock",
+      "sector": "auto"
+    },
+    {
+      "symbol": "TSM",
+      "company_name": "TAIWAN SEMICONDUCTOR MANUFACT SPONSORED ADS",
+      "asset_type": "Stock",
+      "sector": "semiconductor"
+    },
+    {
+      "symbol": "TTD",
+      "company_name": "THE TRADE DESK INC COM CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "TTWO",
+      "company_name": "TAKE-TWO INTERACTIVE SOFTWARE COM",
+      "asset_type": "Stock",
+      "sector": "software"
+    },
+    {
+      "symbol": "TWLO",
+      "company_name": "TWILIO INC CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "TXN",
+      "company_name": "TEXAS INSTRS INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "TXRH",
+      "company_name": "TEXAS ROADHOUSE INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "U",
+      "company_name": "UNITY SOFTWARE INC COM",
+      "asset_type": "Stock",
+      "sector": "software"
+    },
+    {
+      "symbol": "UAL",
+      "company_name": "UNITED AIRLS HLDGS INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "UAMY",
+      "company_name": "UNITED STATES ANTIMONY CORP COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "UBER",
+      "company_name": "UBER TECHNOLOGIES INC COM",
+      "asset_type": "Stock",
+      "sector": "internet"
+    },
+    {
+      "symbol": "UEC",
+      "company_name": "URANIUM ENERGY CORP COM",
+      "asset_type": "Stock",
+      "sector": "energy"
+    },
+    {
+      "symbol": "UL",
+      "company_name": "UNILEVER PLC SPON ADR NEW",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "ULTA",
+      "company_name": "ULTA BEAUTY INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "UMAC",
+      "company_name": "UNUSUAL MACHS INC COM SHS",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "UNG",
+      "company_name": "UNITED STS NAT GAS FD LP UNIT PAR",
+      "asset_type": "Stock",
+      "sector": "energy"
+    },
+    {
+      "symbol": "UNH",
+      "company_name": "UNITEDHEALTH GROUP INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "UNP",
+      "company_name": "UNION PAC CORP COM",
+      "asset_type": "Stock",
+      "sector": "auto"
+    },
+    {
+      "symbol": "UPRO",
+      "company_name": "PROSHARES TR ULTRPRO S&P500",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "UPS",
+      "company_name": "UNITED PARCEL SVCS INC CL B",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "UPST",
+      "company_name": "UPSTART HLDGS INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "UPXI",
+      "company_name": "UPEXI INC COM NEW",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "URA",
+      "company_name": "GLOBAL X FDS GLOBAL X URANIUM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "URBN",
+      "company_name": "URBAN OUTFITTERS INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "URI",
+      "company_name": "UNITED RENTALS INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "USAR",
+      "company_name": "USA RARE EARTH INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "USB",
+      "company_name": "US BANCORP COM NEW",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "USO",
+      "company_name": "UNITED STS OIL FD LP UNITS",
+      "asset_type": "Stock",
+      "sector": "energy"
+    },
+    {
+      "symbol": "UUUU",
+      "company_name": "ENERGY FUELS INC COM NEW",
+      "asset_type": "Stock",
+      "sector": "energy"
+    },
+    {
+      "symbol": "UWMC",
+      "company_name": "UWM HOLDINGS CORPORATION COM CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "V",
+      "company_name": "VISA INC COM CL A",
+      "asset_type": "Stock",
+      "sector": "fintech"
+    },
+    {
+      "symbol": "VALE",
+      "company_name": "VALE S A SPONSORED ADS",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "VERU",
+      "company_name": "VERU INC COM NEW",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "VFC",
+      "company_name": "V F CORP COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "VG",
+      "company_name": "VENTURE GLOBAL INC COM CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "VIX",
+      "company_name": "CBOE Volatility Index",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "VKTX",
+      "company_name": "VIKING THERAPEUTICS INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "VLO",
+      "company_name": "VALERO ENERGY CORP COM",
+      "asset_type": "Stock",
+      "sector": "energy"
+    },
+    {
+      "symbol": "VOD",
+      "company_name": "VODAFONE GROUP PLC SPONSORED ADR",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "VRT",
+      "company_name": "VERTIV HOLDINGS CO COM CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "VRTX",
+      "company_name": "VERTEX PHARMACEUTICALS INC COM",
+      "asset_type": "Stock",
+      "sector": "biotech"
+    },
+    {
+      "symbol": "VST",
+      "company_name": "VISTRA CORP COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "VXUS",
+      "company_name": "VANGUARD STAR FDS VG TL INTL STK F",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "VZ",
+      "company_name": "VERIZON COMMUNICATIONS INC COM",
+      "asset_type": "Stock",
+      "sector": "telecom"
+    },
+    {
+      "symbol": "W",
+      "company_name": "WAYFAIR INC CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "WBD",
+      "company_name": "WARNER BROS DISCOVERY INC COM SER A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "WDAY",
+      "company_name": "WORKDAY INC CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "WDC",
+      "company_name": "WESTERN DIGITAL CORP COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "WEN",
+      "company_name": "WENDYS CO COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "WFC",
+      "company_name": "WELLS FARGO & CO COM",
+      "asset_type": "Stock",
+      "sector": "banking"
+    },
+    {
+      "symbol": "WGS",
+      "company_name": "GENEDX HOLDINGS CORP COM CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "WMB",
+      "company_name": "WILLIAMS COS INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "WMT",
+      "company_name": "WALMART INC COM",
+      "asset_type": "Stock",
+      "sector": "retail"
+    },
+    {
+      "symbol": "WOLF",
+      "company_name": "WOLFSPEED INC COMMON STOCK",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "WPM",
+      "company_name": "WHEATON PRECIOUS METALS CORP COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "WRBY",
+      "company_name": "WARBY PARKER INC CL A COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "WULF",
+      "company_name": "TERAWULF INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "WYNN",
+      "company_name": "WYNN RESORTS LTD COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "XBI",
+      "company_name": "SPDR SERIES TRUST ST STR SP BIOT",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "XE",
+      "company_name": "X-ENERGY INC COM CL A",
+      "asset_type": "Stock",
+      "sector": "energy"
+    },
+    {
+      "symbol": "XEO",
+      "company_name": "S&P 100 index European-style",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "XHB",
+      "company_name": "SPDR SERIES TRUST ST STR SP HOME",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "XNDU",
+      "company_name": "XANADU QUANTUM TECHNOLO LTD SUB VTG B",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "XOM",
+      "company_name": "EXXONMOBIL HOLDINGS CORP COM SHS",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "XOP",
+      "company_name": "SPDR SERIES TRUST SP O&G EXPL PRO",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "XP",
+      "company_name": "XP INC CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "XPEV",
+      "company_name": "XPENG INC ADS",
+      "asset_type": "Stock",
+      "sector": "auto"
+    },
+    {
+      "symbol": "XRT",
+      "company_name": "SPDR SERIES TRUST ST STR SP RETAIL",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "XSP",
+      "company_name": "Mini-SPX",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "XSPBX",
+      "company_name": "MiniSPXBinaryOptions",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "XYZ",
+      "company_name": "BLOCK INC CL A",
+      "asset_type": "Stock",
+      "sector": "fintech"
+    },
+    {
+      "symbol": "ZETA",
+      "company_name": "ZETA GLOBAL HOLDINGS CORP CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "ZIM",
+      "company_name": "ZIM INTEGRATED SHIPPING SERV SHS",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "ZM",
+      "company_name": "ZOOM COMMUNICATIONS INC CL A",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "ZS",
+      "company_name": "ZSCALER INC COM",
+      "asset_type": "Stock",
+      "sector": "other"
+    },
+    {
+      "symbol": "ZSL",
+      "company_name": "PROSHARES TR II ULTRA SHORT SILV",
+      "asset_type": "Stock",
+      "sector": "other"
+    }
+  ]
+}

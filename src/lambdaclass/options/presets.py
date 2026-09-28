@@ -178,6 +178,23 @@ def preset_strangle(
     ]
 
 
+def preset_short_straddle(chain: pd.DataFrame, expiry: str, spot: float, *, lots: int = 1) -> list[Leg]:
+    quantity = -abs(int(lots))
+    return [
+        _snap(chain, "call", expiry, spot, quantity),
+        _snap(chain, "put", expiry, spot, quantity),
+    ]
+
+
+def preset_short_strangle(chain: pd.DataFrame, expiry: str, spot: float, *, offset: float, lots: int = 1) -> list[Leg]:
+    offset = abs(float(offset))
+    quantity = -abs(int(lots))
+    return [
+        _snap(chain, "put", expiry, spot - offset, quantity),
+        _snap(chain, "call", expiry, spot + offset, quantity),
+    ]
+
+
 def preset_butterfly(
     chain: pd.DataFrame,
     expiry: str,
@@ -312,6 +329,19 @@ PRESETS: dict[str, PresetSpec] = {
             ParamSpec("lots", "int", "Lots", 1, min_value=1, step=1),
         ),
     ),
+    "short_straddle": PresetSpec(
+        "Short straddle",
+        preset_short_straddle,
+        (ParamSpec("lots", "int", "Lots", 1, min_value=1, step=1),),
+    ),
+    "short_strangle": PresetSpec(
+        "Short strangle",
+        preset_short_strangle,
+        (
+            ParamSpec("offset", "float", "OTM offset ($)", 5.0, min_value=0.5, step=0.5),
+            ParamSpec("lots", "int", "Lots", 1, min_value=1, step=1),
+        ),
+    ),
     "butterfly": PresetSpec(
         "Call butterfly",
         preset_butterfly,
@@ -421,6 +451,8 @@ __all__ = [
     "preset_ratio_spread",
     "preset_short_call",
     "preset_short_put",
+    "preset_short_straddle",
+    "preset_short_strangle",
     "preset_straddle",
     "preset_strangle",
     "preset_vertical_spread",

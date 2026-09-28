@@ -13,6 +13,7 @@ def align_events(
     *,
     pre_days: int = 30,
     post_days: int = 10,
+    symbol: str | None = None,
 ) -> pd.DataFrame:
     """Stack each earnings event on trading days around its reaction session.
 
@@ -40,6 +41,8 @@ def align_events(
             row["earnings_date"] = event_day
             row["timing"] = timing
             row["rel_day"] = offset
+            if symbol is not None:
+                row["symbol"] = symbol
             rows.append(row)
     return pd.DataFrame(rows)
 
@@ -101,6 +104,7 @@ def event_table(aligned: pd.DataFrame) -> pd.DataFrame:
     columns = [
         "earnings_date",
         "timing",
+        "symbol",
         "iv_front_pre",
         "iv_front_post",
         "crush_pct",
@@ -140,6 +144,7 @@ def event_table(aligned: pd.DataFrame) -> pd.DataFrame:
             {
                 "earnings_date": event_day,
                 "timing": group["timing"].iloc[0],
+                "symbol": group["symbol"].iloc[0] if "symbol" in group.columns else None,
                 "iv_front_pre": pre,
                 "iv_front_post": post,
                 "crush_pct": None if pre in (None, 0.0) or post is None else 1.0 - post / pre,

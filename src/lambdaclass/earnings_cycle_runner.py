@@ -79,7 +79,7 @@ def run_earnings_iv_study(
         else:
             continue
 
-        aligned = align_events(vol_df, earnings, pre_days=30, post_days=10)
+        aligned = align_events(vol_df, earnings, pre_days=30, post_days=10, symbol=sym)
         if aligned is None or aligned.empty:
             per_symbol_count[sym] = 0
             continue

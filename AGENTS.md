@@ -54,6 +54,7 @@ All via `lambdaclass` (Python ≥ 3.11, `pip install -e ".[dev]"`).
 - **Fetch**: Retries (3) with backoff on adapter failures.
 - **Storage**: `DuckDBStore` writes Parquet under `data/stocks/<SYMBOL>.parquet` and `data/options/<SYMBOL>.parquet`; append merges and dedupes by `(symbol, date)` / `(symbol, contract_symbol, asof)`.
 - **Backtest engine**: Bar loop; options chain keyed by `asof` string matching bar `date`; stock + options commission/slippage from prefs; open-options ledger with MTM and expiry settlement ([ADR-0005](docs/decisions/0005-options-engine-accounting.md)).
+- **GitHub and the local PC**: cloud agents can push to `origin` only. The PC catches up with `scripts/sync-from-github.ps1` (fast-forward only). See `.cursor/skills/sync-github-local/SKILL.md`.
 
 ## Where to look first
 

@@ -15,6 +15,8 @@ class StrategyImpl(Strategy):
         "enter_days_before": 5,
         "exit_days_after": 1,
         "min_dte": 7,
+        "max_iv_rank": None,   # only enter if IV rank <= this (None = no filter)
+        "min_iv_rank": None,   # only enter if IV rank >= this (None = no filter)
     }
 
     def on_bar(self, context: StrategyContext) -> StrategyDecision:
@@ -44,6 +46,17 @@ class StrategyImpl(Strategy):
         days_to = context.days_to_next_earnings
         if days_to is None or days_to != int(self.params["enter_days_before"]):
             return StrategyDecision(action="hold")
+
+        # IV rank conditional filter
+        max_ivr = self.params.get("max_iv_rank")
+        min_ivr = self.params.get("min_iv_rank")
+        if max_ivr is not None and context.iv_rank_252 is not None:
+            if float(context.iv_rank_252) > float(max_ivr):
+                return StrategyDecision(action="hold", metadata={"reason": "iv_rank_too_high", "iv_rank": context.iv_rank_252})
+        if min_ivr is not None and context.iv_rank_252 is not None:
+            if float(context.iv_rank_252) < float(min_ivr):
+                return StrategyDecision(action="hold", metadata={"reason": "iv_rank_too_low", "iv_rank": context.iv_rank_252})
+
         if context.options_chain is None or context.options_chain.empty:
             return StrategyDecision(action="hold")
 
